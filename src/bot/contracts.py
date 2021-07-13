@@ -1,3 +1,4 @@
+import asyncio
 import datetime
 
 import ib_insync as ibs
@@ -65,6 +66,53 @@ def suggest_stocks(ib):
     ]
     [ib.qualifyContracts(c) for c in contracts]
     return contracts
+
+
+async def suggest_stocks_async(ib):
+    contracts = [
+        # ibs.Stock('AAPL', 'SMART', 'USD'),
+        ibs.Stock('AMZN', 'SMART', 'USD'),
+        ibs.Stock('FB', 'SMART', 'USD'),
+        ibs.Stock('GOOGL', 'SMART', 'USD'),
+
+        ibs.Stock('SNOW', 'SMART', 'USD'),
+        ibs.Stock('SPY', 'SMART', 'USD'),
+        ibs.Stock('QLD', 'SMART', 'USD'),
+
+        # ibs.Stock('AVGO', 'SMART', 'USD'),
+        # ibs.Stock('BA', 'SMART', 'USD'),
+        # ibs.Stock('BKNG', 'SMART', 'USD'),
+        # ibs.Stock('BYND', 'SMART', 'USD'),
+        ibs.Stock('CMG', 'SMART', 'USD'),
+        ibs.Stock('DIS', 'SMART', 'USD'),
+        # ibs.Stock('LRCX', 'SMART', 'USD'),
+        # ibs.Stock('MA', 'SMART', 'USD'),
+        # ibs.Stock('MELI', 'SMART', 'USD'),
+        # ibs.Stock('NFLX', 'SMART', 'USD'),
+        # ibs.Stock('NOW', 'SMART', 'USD'),
+        # # ibs.Stock('NTES', 'SMART', 'USD'),
+        # ibs.Stock('NVDA', 'SMART', 'USD'),
+        # # ibs.Stock('REGN', 'SMART', 'USD'),
+        # ibs.Stock('ROKU', 'SMART', 'USD'),
+        # ibs.Stock('SHOP', 'SMART', 'USD'),
+        # ibs.Stock('STMP', 'SMART', 'USD'),
+        # ibs.Stock('SPOT', 'SMART', 'USD'),
+        # ibs.Stock('TSLA', 'SMART', 'USD'),
+        # ibs.Stock('TTD', 'SMART', 'USD'),
+        # ibs.Stock('ZS', 'SMART', 'USD'),
+        # ibs.Stock('AMD', 'SMART', 'USD'),
+        # ibs.Stock('NKLA', 'SMART', 'USD'),
+        # ibs.Stock('ZM', 'SMART', 'USD'),
+    ]
+    # davs2rt does qualifyContractAsync work in parallel witt the list? think so
+    # tasks = []
+    # for c in contracts:
+    #     tasks.append(ib.qualifyContractsAsync(c))
+    # foo = await asyncio.gather(*tasks)
+    qcontracts = await ib.qualifyContractsAsync(*contracts)
+    print(qcontracts)
+
+    return qcontracts
 
 
 def suggest_all_options(ib):
