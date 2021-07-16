@@ -138,7 +138,7 @@ def get_contracts_of_type(ib, contract_type, limit=100):
 
 def run_trading(contract_type, backtest, ignore_market_data, limit=None, use_obv=False, use_ema=False):
     print('run trading')
-    ib = connect(contract_type=contract_type, client_id=23)        
+    ib = connect(contract_type=contract_type, client_id=23)
 
     # print('check if mkt data')
     while contract_type == 'options' and not ignore_market_data and not util.is_options_market_data_available(ib):
@@ -190,7 +190,7 @@ def cache_warm():
     provider_class = LiveTickProvider
     for i, contract in enumerate(contracts):
         provider_class(ib, contract, bar_size='30 secs', duration='3 D')
-    
+
 
 def flatten_positions():
     account = conf.ACCOUNT
@@ -505,6 +505,31 @@ def run_pnl():
 
     pnl_singles = []
     contracts = [p.contract for p in ib.positions()]
+    contracts = ib.qualifyContracts(*contracts)
+    # Dave's version is getting something like 5 redundant contracts, which is
+    # what triggers assertion error for redundant key. cancel-ing work, but is
+    # inefficient and incorrect
+    for contract in contracts:
+        # ib.cancelPnLSingle(account, '', contract.conId)
+        foo = ib.reqPnLSingle(account, '', contract.conId)
+        pnl_singles.append(foo)
+
+    while True:
+        ib.sleep(1)
+        print('--')
+        print(pnl)
+        for pnl_single in pnl_singles:
+            print(pnl_single)
+
+
+
+def run_pnl_as():
+    ib = connect()
+    account = conf.ACCOUNT
+    pnl = ib.reqPnL(account)
+
+    pnl_singles = []
+    contracts = [p.contract for p in ib.positions()]
     ib.qualifyContracts(*contracts)
     for contract in contracts:
         pnl_singles.append(ib.reqPnLSingle(account, '', contract.conId))
@@ -533,7 +558,7 @@ def generate_ranges(filename, num_days, contract_type):
 
 
 def dump_cross_data(filename, num_days, contract_type):
-    ib = connect(contract_type=contract_type, client_id=23)        
+    ib = connect(contract_type=contract_type, client_id=23)
 
     contracts = get_contracts_of_type(ib, contract_type)
     end_dt = datetime.datetime.now()
@@ -637,7 +662,7 @@ def train_cross_data(filename):
     df = (df[(df.cross_type == 'buy')]).head(5000)
     df = df.sort_values(['from_peak_0_datetime'])
     print(df.describe())
-    
+
     labels = np.array(df['percent_of_peak'])
     column_list = list(df.columns)
     # print('column_list', column_list)

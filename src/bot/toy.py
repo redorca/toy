@@ -3,6 +3,7 @@ import asyncio
 import datetime
 import time
 
+
 import ib_insync as ibs
 
 from bot import util
@@ -11,8 +12,10 @@ from bot import connect
 from bot.contracts import suggest_stocks, \
     suggest_stocks_async, get_option_market_data, get_expiry_and_strikes
 
-def elapsed_time(start:datetime.datetime):
-    now_ = datetime.datetime.now()
+from main import *
+
+def elapsed_time(start:float):
+    now_ = time.perf_counter
     return now_ - start
 
 async def suggest_options_async(ib, limit=None, stocks_limit=None, limit_strike=4,
@@ -171,35 +174,30 @@ def suggest_options(ib, limit=None, stocks_limit=None, limit_strike=4, no_filter
 
 
 def main():
-    start = datetime.datetime.now()
-    ib = connect.connect()
-    contracts = suggest_stocks(ib)
-    fin = datetime.datetime.now( )
-    for c in contracts:
-        print(c)
-    print(fin - start)
-    return ib
+    start = time.perf_counter()
+    run_pnl()
+    print(elapsed_time(start))
+
 
 
 
 async def main_async(ib):
-    start = datetime.datetime.now()
-    # ib = await connect.connect_async()
+    start = time.perf_counter
+    ib = await connect.connect_async()
     if not ib.isConnected():
         print('not connected')
         raise RuntimeError("7f")
     contracts = await suggest_stocks_async(ib)
-    fin = datetime.datetime.now()
     ib.disconnect()
     for c in contracts:
         print(c)
-    print(fin - start)
+    print(elapsed_time(start))
 
 
 if __name__ == '__main__':
     print("synchronous")
-    ib = main()
-
+    main()
+    exit()
     print("asynchronous")
-    asyncio.run(main_async(ib), debug=True)
+    asyncio.run(main_async(), debug=True)
     print('done')

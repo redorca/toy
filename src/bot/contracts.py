@@ -109,7 +109,8 @@ async def suggest_stocks_async(ib):
     # for c in contracts:
     #     tasks.append(ib.qualifyContractsAsync(c))
     # foo = await asyncio.gather(*tasks)
-    qcontracts = await ib.qualifyContractsAsync(*contracts)
+    # qcontracts = await ib.qualifyContractsAsync(*contracts)
+    qcontracts =  ib.qualifyContracts(*contracts)
     print(qcontracts)
 
     return qcontracts
@@ -344,11 +345,11 @@ def suggest_micro_futures(ib):
 
 def suggest_futures(ib):
     contracts = [
-        ibs.Future('NQ', '20201218', 'GLOBEX'),
-        ibs.Future('ES', '20201218', 'GLOBEX'),
-        ibs.Future('GC', '20201229', 'NYMEX'),
-        ibs.Future('SI', '20201229', 'NYMEX', currency='USD', multiplier=5000),
-        ibs.Future('RTY', '20201218', 'GLOBEX'),
+        ibs.Future('NQ', '20210917', 'GLOBEX'),
+        ibs.Future('ES', '20210917', 'GLOBEX'),
+        ibs.Future('GC', '20210827', 'NYMEX'),
+        ibs.Future('SI', '2020928', 'NYMEX', currency='USD', multiplier=5000),
+        ibs.Future('RTY', '20210917', 'GLOBEX'),
 
         # ibs.Future('CL', '20210121', 'NYMEX'),
         # ibs.Future('BRR', '20201127', 'CMECRYPTO'),
