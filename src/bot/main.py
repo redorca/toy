@@ -506,6 +506,8 @@ def run_pnl():
     pnl_singles = []
     contracts = [p.contract for p in ib.positions()]
     contracts = ib.qualifyContracts(*contracts)
+    contracts.sort(key=lambda x: x.symbol)  # meaningless, just to look at
+    contracts = set(contracts) # collapse to unique contracts
     # Dave's version is getting something like 5 redundant contracts, which is
     # what triggers assertion error for redundant key. cancel-ing work, but is
     # inefficient and incorrect
