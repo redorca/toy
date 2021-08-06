@@ -504,21 +504,15 @@ def run_pnl():
     pnl = ib.reqPnL(account)
 
     pnl_singles = []
-    contracts = [p.contract for p in ib.positions()]
-    contracts = ib.qualifyContracts(*contracts)
-    contracts.sort(key=lambda x: x.symbol)  # meaningless, just to look at
-    contracts = set(contracts) # collapse to unique contracts
-    # Dave's version is getting something like 5 redundant contracts, which is
-    # what triggers assertion error for redundant key. cancel-ing work, but is
-    # inefficient and incorrect
+    contracts_ = [p.contract for p in ib.positions(account)] # without account, fetches all
+    contracts = ib.qualifyContracts(*contracts_) # dumps everything not on NYSE why?
     for contract in contracts:
-        # ib.cancelPnLSingle(account, '', contract.conId)
         foo = ib.reqPnLSingle(account, '', contract.conId)
         pnl_singles.append(foo)
 
     while True:
-        ib.sleep(1)
-        print('--')
+        ib.sleep(10)
+        print('=' * 80)
         print(pnl)
         for pnl_single in pnl_singles:
             print(pnl_single)
