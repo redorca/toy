@@ -15,7 +15,7 @@ from bot.contracts import suggest_stocks, \
 from main import *
 
 def elapsed_time(start:float):
-    now_ = time.perf_counter
+    now_ = time.perf_counter()
     return now_ - start
 
 async def suggest_options_async(ib, limit=None, stocks_limit=None, limit_strike=4,

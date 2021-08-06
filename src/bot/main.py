@@ -504,18 +504,19 @@ def run_pnl():
     pnl = ib.reqPnL(account)
 
     pnl_singles = []
-    contracts_ = [p.contract for p in ib.positions(account)] # without account, fetches all
-    contracts = ib.qualifyContracts(*contracts_) # dumps everything not on NYSE why?
+    contracts = [p.contract for p in ib.positions(account)] # without account, fetches all
+    # contracts = ib.qualifyContracts(*contracts_) # dumps everything not on NYSE why?
     for contract in contracts:
         foo = ib.reqPnLSingle(account, '', contract.conId)
         pnl_singles.append(foo)
+    ib.sleep(2)
+    # while True:
+    print('=' * 120)
 
-    while True:
-        ib.sleep(10)
-        print('=' * 80)
-        print(pnl)
-        for pnl_single in pnl_singles:
-            print(pnl_single)
+    print(pnl)
+    for pnl_single in pnl_singles:
+        print(pnl_single)
+        # ib.sleep(10)
 
 
 
