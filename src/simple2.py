@@ -50,7 +50,7 @@ async def awaiting_for_complete(event1, event2):
     await asyncio.gather(event1, event2)
 
 
-def main():
+async def main():
     loop = asyncio.get_event_loop()
     asyncio.set_event_loop(loop)
     # loop.run_until_complete(main())
@@ -60,9 +60,11 @@ def main():
                account=bot.conf.ACCOUNT)
     start = time.perf_counter()
     if True:
-        option_chains_read = asyncio.create_task(read_task, loop=asyncio.new_event_loop())
+        loop1 = asyncio.new_event_loop()
+        loop2 = asyncio.new_event_loop()
+        option_chains_read = loop1.create_task(read_task())
         # create a queue of data.
-        option_chains_options = asyncio.create_task(options_async(ib), loop=asyncio.new_event_loop())
+        option_chains_options = loop2.create_task(options_async(ib))
         # option_chains = asyncio.run(options_async(ib))
     else:
         option_chains = options(ib)
@@ -72,11 +74,10 @@ def main():
     end = time.perf_counter()
     print("that took {} secs".format(end - start))
     # l = ib.reqSecDefOptParamsAsync("TSLA", "", "STK", underlyingConId)
-    loop.run_until_complete(awaiting_for_complete(option_chains_read, option_chains_options))
+    await asyncio.gather(option_chains_read, option_chains_options)
 
-
+asyncio.run(main())
 if __name__ == "__main__":
-    main()
     import sys
 
     sys.exit(0)
