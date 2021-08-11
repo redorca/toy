@@ -42,10 +42,10 @@ async def read_task():
     while True:
         print("waiting for data...")
         option_chain_print = await in_queue.get()
-        in_queue.task_done()
         end = time.perf_counter()
-        print("that took {} secs \n".format(end - start))
-        print(option_chain_print, in_queue.qsize())
+        in_queue.task_done()
+        print("ASYNC that took {} secs \n", format(end - start))
+        # print(option_chain_print, in_queue.qsize())
 
 
 async def main(ib):
@@ -54,13 +54,17 @@ async def main(ib):
     if True:
         option_chains_read = loop.create_task(read_task())
         option_chains_options = loop.create_task(options_async(ib))
-    else:
-        option_chains = options(ib)
+        option_chains_options1 = loop.create_task(options_async(ib))
+        option_chains_options2 = loop.create_task(options_async(ib))
+        option_chains_options3 = loop.create_task(options_async(ib))
+        option_chains_options4 = loop.create_task(options_async(ib))
 
-    await asyncio.gather(option_chains_read, option_chains_options)
+    await asyncio.gather(option_chains_read, option_chains_options, option_chains_options1, option_chains_options2,
+                         option_chains_options4, option_chains_options3)
 
 
 if __name__ == "__main__":
+    print("starting main loop")
     ib = ibs.IB()
     # ib = True
     trader_workstation_port = 7496
@@ -68,8 +72,11 @@ if __name__ == "__main__":
                timeout=20,
                account=bot.conf.ACCOUNT
                )
+    print("starting main loop")
+    start = time.perf_counter()
+    option_chains = options(ib)
+    print("SYNC took {} secs \n", format(time.perf_counter() - start))
     asyncio.run(main(ib))
-
     import sys
 
     sys.exit(0)
