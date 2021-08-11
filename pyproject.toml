@@ -1,0 +1,29 @@
+[tool.poetry]
+name = "toy"
+version = "1.0.0"
+description = "toy app to test asyncio with trading apps"
+authors = ["Tanvir Mudhar, Dave Stewart"]
+license = "PRI"
+
+[tool.poetry.dependencies]
+python = "3.9"
+attrs = "^21.2.0"
+banpei = "^0.1.2"
+certifi = "^2021.5.30"
+chardet = "^4.0.0"
+click = "^8.0.1"
+Cycler = "^0.10.0"
+diskcache = "^5.2.1"
+docopt = "^0.6.2"
+eventkit = "^0.8.8"
+ib-insync = "^0.9.66"
+idna = "^3.2"
+iniconfig = "^1.1.1"
+itsdangerous = "^2.0.1"
+TA-Lib = "0.4.18"
+
+[tool.poetry.dev-dependencies]
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
