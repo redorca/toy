@@ -37,18 +37,33 @@ def options(ib):
 
 async def options_async(ib):
     begin = time.perf_counter()
-    for position in ib.positions(bot.conf.ACCOUNT):
+    positions = ib.positions(bot.conf.ACCOUNT)
+    print("fetching all positions took {:e} secs".format(time.perf_counter() - begin))
+    option_chains = []
+    futures = []
+    for position in positions:
         if isinstance(position.contract, ibs.Stock):
             start = time.perf_counter()
             print('stock:', position.contract)
             symbol = position.contract.symbol
             conId = position.contract.conId
             sec_type = 'STK'
-            option_chain = await ib.reqSecDefOptParamsAsync(symbol, '', sec_type, conId)
-            await options_q.put(option_chain)
+            # if we created tasks could we run these concurrently?
+            futures.append(ib.reqSecDefOptParamsAsync(symbol, '', sec_type,
+                conId,))
+            # print("option chain:", option_chains[:-1])
             end = time.perf_counter()
-            print("fetching {} took {:.1f} seconds".format(symbol, end - start))
-    print("fetching ALL options took {:.1f} seconds".format(time.perf_counter()-begin))
+            print("fetching {} option chain took {:.3f} seconds".format(symbol,
+                end - start))
+    for chain in  asyncio.as_completed(futures):
+        waiting_start = time.perf_counter()
+        await options_q.put(chain)
+        print("data wait  took {:.3f} seconds".format(
+            time.perf_counter() - waiting_start))
+        await asyncio.sleep(0.1) # yield to queue
+    print("start fetching ALL options took {:.3f} seconds".format(time.perf_counter(
+
+    )-begin))
 
 
 async def read_task():
@@ -62,10 +77,10 @@ async def read_task():
             option_chain_print = await options_q.get()
             end = time.perf_counter()
             options_q.task_done()
-            print(option_chain_print)
+            print(await option_chain_print)
             # print("queue read took {:.3f} secs".format(end - start))
             # print("{} items in queue".format(options_q.qsize()))
-            extra_processing = True
+            extra_processing = False
             if extra_processing:
                 j = 0
                 st = time.perf_counter()
@@ -92,7 +107,7 @@ async def main(ib):
         return_when=asyncio.FIRST_COMPLETED)
     print("{} are done".format(done))
     while options_q.qsize() > 0:
-        print("queue has {} items to process".format(options_q.qsize()))
+        # print("queue has {} items to process".format(options_q.qsize()))
         await asyncio.sleep(0.1)
     for task in pending:
         print("cancelling", task.get_name())
