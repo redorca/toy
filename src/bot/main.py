@@ -31,6 +31,8 @@ Options:
   --ema                   Use EMA cross based signal for trading.
 
 """
+import asyncio
+
 from docopt import docopt
 
 import csv
@@ -55,8 +57,15 @@ from sklearn.metrics import classification_report, confusion_matrix
 
 from bot.provider import BacktestTickProvider, LiveTickProvider
 from bot.analyzer import TechnicalAnalyzer, TrendAnalyzer
-from bot.contracts import OptionsWatchlist, suggest_stocks, suggest_options, suggest_futures, suggest_futures_options, suggest_all_options, suggest_forex, suggest_ranked_options, suggest_micro_futures, suggest_fang_stocks, suggest_crypto
-from bot.connect import connect
+from bot.contracts import (OptionsWatchlist,
+    suggest_stocks, suggest_stocks_async,
+    suggest_options, suggest_options_async,
+    suggest_futures, suggest_futures_options,
+    suggest_all_options, suggest_forex,
+    suggest_ranked_options, suggest_micro_futures,
+    suggest_fang_stocks, suggest_crypto,
+)
+from bot.connect import connect, connect_async
 from bot.pnl import SignalLogger
 from bot.strategy import ToggleStrategy, EmaCrossoverStrategy
 from bot.trader import Trader
@@ -136,12 +145,69 @@ def get_contracts_of_type(ib, contract_type, limit=100):
     return contracts
 
 
-def run_trading(contract_type, backtest, ignore_market_data, limit=None, use_obv=False, use_ema=False):
+async def get_contracts_of_type_async(ib, contract_type, limit=100):
+    if contract_type == 'options':
+        contracts = await suggest_options_async(ib, limit=limit, stocks_limit=50)
+    elif contract_type == 'futures':
+        contracts = suggest_futures(ib)[:limit]
+    elif contract_type == 'ufutures':
+        contracts = suggest_micro_futures(ib)[:limit]
+    elif contract_type == 'stocks':
+        contracts = suggest_stocks(ib)[:limit]
+    elif contract_type == 'fang':
+        contracts = suggest_fang_stocks(ib)[:limit]
+    elif contract_type == 'crypto':
+        contracts = suggest_crypto()[:limit]
+    elif contract_type == 'custom':
+        contracts = [
+            ibs.Option('TSLA', '20201023', 445, 'C', 'SMART'),
+            ibs.Option('TSLA', '20201023', 445, 'P', 'SMART'),
+            ibs.Option('TSLA', '20201023', 450, 'C', 'SMART'),
+            ibs.Option('TSLA', '20201023', 450, 'P', 'SMART'),
+
+            ibs.Option('AMZN', '20201023', 3300, 'C', 'SMART'),
+            ibs.Option('AMZN', '20201023', 3300, 'P', 'SMART'),
+            ibs.Option('AMZN', '20201023', 3400, 'C', 'SMART'),
+            ibs.Option('AMZN', '20201023', 3400, 'P', 'SMART'),
+
+            ibs.Option('GOOG', '20201023', 1500, 'C', 'SMART'),
+            ibs.Option('GOOG', '20201023', 1500, 'P', 'SMART'),
+            ibs.Option('GOOG', '20201023', 1600, 'C', 'SMART'),
+            ibs.Option('GOOG', '20201023', 1600, 'P', 'SMART'),
+        ]
+        # contracts = contracts[:2]
+        contracts = [
+            ibs.Future('SI', '20201229', 'NYMEX', currency='USD', multiplier=5000),
+            # ibs.Stock('AMZN', 'SMART', 'USD'),
+            # ibs.Stock('TSLA', 'SMART', 'USD'),
+            # ibs.Future('ES', '20201218', 'GLOBEX'),
+            # ibs.Future('NQ', '20201218', 'GLOBEX'),
+            # ibs.Stock('CCL', 'SMART', 'USD'),
+            # ibs.Future('ES', '20201218', 'GLOBEX'),
+            # ibs.Option('TSLA', '20201030', 445, 'C', 'SMART'),
+            # ibs.Option('TSLA', '20201030', 445, 'P', 'SMART'),
+            # ibs.Option('AMZN', '20201030', 3300, 'P', 'SMART'),
+            # ibs.Option('AMZN', '20201030', 3400, 'C', 'SMART'),
+        ]
+    else:
+        print('Unexpected contract type', contract_type)
+        sys.exit(1)
+    return contracts
+
+
+def run_trading(contract_type,
+        backtest,
+        ignore_market_data,
+        limit=None,
+        use_obv=False,
+        use_ema=False
+):
     print('run trading')
     ib = connect(contract_type=contract_type, client_id=23)
 
     # print('check if mkt data')
-    while contract_type == 'options' and not ignore_market_data and not util.is_options_market_data_available(ib):
+    while contract_type == 'options' and not ignore_market_data \
+            and not util.is_options_market_data_available(ib):
         print('market data is not available, wait 30 seconds and try again')
         ib.sleep(30)
 
@@ -159,16 +225,72 @@ def run_trading(contract_type, backtest, ignore_market_data, limit=None, use_obv
 
     if backtest:
         trader = Trader(ib, conf.ACCOUNT, contracts,
-                        bar_size='5 mins',
-                        backtest=True,
-                        backtest_start=datetime.datetime(year=2020, month=12, day=1,
-                                                         hour=1, minute=0, second=0),
-                        backtest_duration='10 D',
-                        use_obv=use_obv,
-                        use_ema=use_ema)
+            bar_size='5 mins',
+            backtest=True,
+            backtest_start=datetime.datetime(year=2020, month=12, day=1,
+                hour=1, minute=0, second=0
+            ),
+            backtest_duration='10 D',
+            use_obv=use_obv,
+            use_ema=use_ema
+        )
     else:
         trader = Trader(ib, conf.ACCOUNT, contracts, bar_size='5 mins',
-                        use_obv=use_obv, use_ema=use_ema)
+            use_obv=use_obv, use_ema=use_ema
+        )
+
+    trader.run()
+
+
+async def run_trading_async(contract_type,
+        backtest,
+        ignore_market_data,
+        limit=None,
+        use_obv=False,
+        use_ema=False
+):
+    print('run trading')
+    # ib_task = asyncio.create_task(
+    #     connect_async(contract_type=contract_type, client_id=23),
+    #     name='connect'
+    # )
+    # print(type(ib_task), ib_task)
+    ib = await connect_async(contract_type=contract_type, client_id=23)
+    # print('check if mkt data')
+    while contract_type == 'options' \
+            and not ignore_market_data \
+            and not util.is_options_market_data_available(ib):
+        print('market data is not available, wait 30 seconds and try again')
+        print(type(ib.sleep(30)))
+        await ib.sleep(30)
+
+    # contracts = suggest_futures(ib)[:3]
+    # contracts = suggest_stocks(ib)[:3]
+    # contracts = suggest_options(ib, limit=15, stocks_limit=10)
+    # contracts = suggest_ranked_options(ib, 2, 2)
+
+    if limit is None:
+        limit = 30
+
+    contracts = []
+    for ct in contract_type.split(','):
+        contracts += await get_contracts_of_type_async(ib, ct, limit=int(limit))
+
+    if backtest:
+        trader = Trader(ib, conf.ACCOUNT, contracts,
+            bar_size='5 mins',
+            backtest=True,
+            backtest_start=datetime.datetime(year=2020, month=12, day=1,
+                hour=1, minute=0, second=0
+            ),
+            backtest_duration='10 D',
+            use_obv=use_obv,
+            use_ema=use_ema
+        )
+    else:
+        trader = Trader(ib, conf.ACCOUNT, contracts, bar_size='5 mins',
+            use_obv=use_obv, use_ema=use_ema
+        )
 
     trader.run()
 
