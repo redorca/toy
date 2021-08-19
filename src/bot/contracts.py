@@ -1,5 +1,6 @@
 import asyncio
 import datetime
+import time
 
 import ib_insync as ibs
 
@@ -111,7 +112,9 @@ async def suggest_stocks_async(ib):
     # foo = await asyncio.gather(*tasks)
     # qcontracts = await ib.qualifyContractsAsync(*contracts)
     print(contracts)
+    begin = time.perf_counter()
     contracts =  await ib.qualifyContractsAsync(*contracts)
+    print("qualifying contracts took {:.3f} seconds".format(time.perf_counter() - begin))
     print(contracts)
 
     return contracts
@@ -274,7 +277,7 @@ async def suggest_options_async(ib, limit=None, stocks_limit=None, limit_strike=
     if no_filter:
         return candidate_options[:limit]
 
-    candidate_tickers = ib.reqTickers(*candidate_options)
+    candidate_tickers = await ib.reqTickersAsync(*candidate_options)
     filtered_candidates = []
 
     for co, ticker in zip(candidate_options, candidate_tickers):

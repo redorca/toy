@@ -1,3 +1,4 @@
+import asyncio
 import math
 import time
 import pprint
@@ -168,7 +169,9 @@ class Trader:
 
         self.contracts = contracts
 
-        self.ib.qualifyContracts(*self.contracts)
+        # self.ib.qualifyContracts(*self.contracts)
+        loop = asyncio.get_running_loop()
+        loop.call_soon(self.ib.qualifyContracts, *self.contracts)
 
         if self.backtest:
             provider_class = BacktestTickProvider
@@ -250,6 +253,35 @@ class Trader:
         else:
             sleep_incr = 1
         while self.ib.sleep(sleep_incr):
+            try:
+                if self.use_obv:
+                    self.iterate_obv()
+                elif self.use_ema:
+                    self.iterate_ema()
+                else:
+                    self.iterate()
+            except BacktestDoneException:
+                break
+
+        if self.backtest:
+            print('flatten')
+            self.flatten_backtest()
+            print('done flattening')
+            self.logger.print_summary()
+            # import pdb ; pdb.set_trace()
+
+    async def run_async(self):
+        print('run trader')
+
+        self._last_bar_by_contract = {}
+        self._target_position_for_contract = {}
+        self._bar_position_for_contract = {}
+
+        if self.backtest:
+            sleep_incr = .01
+        else:
+            sleep_incr = 1
+        while await asyncio.sleep(sleep_incr) or True:
             try:
                 if self.use_obv:
                     self.iterate_obv()
@@ -693,7 +725,7 @@ def print_states(infos):
             continue
 
         print('State: [%s]\t%s=%s' % (symbol, key_part, value))
-            
+
 
 def test_callback():
     import pdb ; pdb.set_trace()
