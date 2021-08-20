@@ -292,7 +292,7 @@ async def run_trading_async(contract_type,
             use_obv=use_obv, use_ema=use_ema
         )
 
-    trader.run_async()
+    await trader.run_async()
 
 
 def cache_warm():
