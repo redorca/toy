@@ -2,6 +2,7 @@
 
 Usage:
   main.py trade [--type=<contract_type>] [--backtest] [--ignore-market-data] [--limit=<n>] [--obv] [--ema]
+  main.py trade_sync [--type=<contract_type>] [--backtest] [--ignore-market-data] [--limit=<n>] [--obv] [--ema]
   main.py cache_warm
   main.py flatten
   main.py tickers
@@ -33,7 +34,7 @@ Options:
 """
 import asyncio
 
-import docopt
+from docopt import docopt
 
 import csv
 import datetime
@@ -80,7 +81,7 @@ from bot import orders
 
 pp = pprint.PrettyPrinter()
 logger.basicConfig(
-    level=logger.DEBUG,
+    level=logger.INFO,
     format='%(asctime)s.%(msecs)03d [%(levelname)s] %(module)s - %(funcName)s: %(message)s',
     datefmt='%Y-%m-%d %H:%M:%S',
 )
@@ -200,9 +201,9 @@ async def get_contracts_of_type_async(ib, contract_type, limit=100):
     return contracts
 
 
-def run_trading(contract_type,
-                backtest,
-                ignore_market_data,
+def run_trading(contract_type="options",
+                backtest=False,
+                ignore_market_data=True,
                 limit=None,
                 use_obv=False,
                 use_ema=False
@@ -850,10 +851,12 @@ def train_cross_data(filename):
     plt.show()
 
 
-def run():
+if __name__ == '__main__':
+    logger.critical("docopt for args")
     logger.info("Starting args...")
 
-    args = docopt.docopt(__doc__)
+    args = docopt(__doc__)
+    logger.info('data from logs: %s', args)
 
     if args['trade']:
         asyncio.run(run_trading_async(args['--type'], args['--backtest'], args['--ignore-market-data'], args['--limit'],
@@ -904,11 +907,6 @@ def run():
 
     logger.fatal("Exiting system...")
     logger.shutdown()
-
-
-if __name__ == '__main__':
-    logger.critical("docopt for args")
-    run()
 
 # run_paper_trading()
 # flatten_positions()
