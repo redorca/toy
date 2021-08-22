@@ -1,11 +1,14 @@
 """this is just a trick I use to call main and be able to debug in pycharm"""
 import asyncio
-import main
+import src.main
+from fastlogging import LogInit
 
-print("main caller")
+logger = LogInit(pathName="/logs/main.log", console=True, colors=True, useThreads=True)
+
+logger.info("main caller")
 
 result = asyncio.run(
-    main.run_trading_async(
+    src.main.run_trading_async(
         contract_type="options",
         backtest=False,
         ignore_market_data=True,
