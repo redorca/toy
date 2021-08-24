@@ -1,3 +1,4 @@
+import asyncio
 import math
 import time
 import pprint
@@ -154,7 +155,8 @@ class StateMachine:
 
 
 class Trader:
-    def __init__(self, ib, account, contracts, bar_size='1 min', backtest=False, backtest_start=None, backtest_duration='3 D', use_obv=False, use_ema=False):
+    def __init__(self, ib, account, contracts, bar_size='1 min', backtest=False,
+        backtest_start=None, backtest_duration='3 D', use_obv=False, use_ema=False):
         self.ib = ib
         self.account = account
         self.backtest = backtest
@@ -167,9 +169,9 @@ class Trader:
         self.state_machine = StateMachine([])
 
         self.contracts = contracts
-
-        self.ib.qualifyContracts(*self.contracts)
-
+        start = time.perf_counter()
+        self.contracts =  self.ib.qualifyContracts(*self.contracts)
+        print(f"qualifying contracts async took {time.perf_counter() - start}")
         if self.backtest:
             provider_class = BacktestTickProvider
         else:
@@ -250,6 +252,35 @@ class Trader:
         else:
             sleep_incr = 1
         while self.ib.sleep(sleep_incr):
+            try:
+                if self.use_obv:
+                    self.iterate_obv()
+                elif self.use_ema:
+                    self.iterate_ema()
+                else:
+                    self.iterate()
+            except BacktestDoneException:
+                break
+
+        if self.backtest:
+            print('flatten')
+            self.flatten_backtest()
+            print('done flattening')
+            self.logger.print_summary()
+            # import pdb ; pdb.set_trace()
+
+    async def run_async(self):
+        print('run trader')
+
+        self._last_bar_by_contract = {}
+        self._target_position_for_contract = {}
+        self._bar_position_for_contract = {}
+
+        if self.backtest:
+            sleep_incr = .01
+        else:
+            sleep_incr = 1
+        while asyncio.sleep(sleep_incr, result=True):
             try:
                 if self.use_obv:
                     self.iterate_obv()
@@ -408,7 +439,7 @@ class Trader:
 
         if not self.backtest:
             self.take_profit('p75')
-            self.ib.sleep(1)
+            # self.ib.sleep(1)
 
         provider.incr()
 
@@ -635,7 +666,7 @@ class Trader:
         summary += '-' * 40
         summary += '\n\n'
         print(summary)
-        self.ib.sleep(1)
+        # self.ib.sleep(1)
 
     def flatten_backtest(self):
         for provider in self.providers:
@@ -693,7 +724,7 @@ def print_states(infos):
             continue
 
         print('State: [%s]\t%s=%s' % (symbol, key_part, value))
-            
+
 
 def test_callback():
     import pdb ; pdb.set_trace()

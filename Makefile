@@ -11,7 +11,7 @@ no_targets__:
 
 run:
 	@poetry install
-	@poetry run python main.py $(ARGS)
+	@poetry run python src/main.py $(ARGS)
 
 clean:
 	@rm -rf build dist .eggs *.egg-info
@@ -36,14 +36,11 @@ update:
 
 install:
 	@poetry update
-	@poetry run pyinstaller -F openprotocol.spec --noconfirm
+	@poetry run pyinstaller -F toy.spec --noconfirm
 
 build:
-	@poetry update
-	@poetry run pyinstaller --name openprotocol main.py
-
-proto:
-	@protoc -I=protos --python_out=../OpenProtocol protos/torque/mids/*
+	@poetry install
+	@poetry run pyinstaller --name toy src/main.py $(ARGS)
 
 docker_build:
 	docker build -t toy:latest -f Dockerfile.deps .

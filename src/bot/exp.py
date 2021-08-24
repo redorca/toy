@@ -4,7 +4,7 @@ import pandas as pd
 import ib_insync as ibs
 
 from bot import util
-from analyzer import get_nparrays
+from bot.analyzer import get_nparrays
 
 
 def get_premiums(ib, option):

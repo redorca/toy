@@ -1,16 +1,7 @@
 """toy application to investigate speed improvements from async with ib-"""
-import asyncio
-import datetime
-import time
 
-
-import ib_insync as ibs
-
-from bot import util
-from bot import conf
 from bot import connect
-from bot.contracts import suggest_stocks, \
-    suggest_stocks_async, get_option_market_data, get_expiry_and_strikes
+from bot.contracts import get_option_market_data, get_expiry_and_strikes
 
 from main import *
 
