@@ -48,7 +48,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import sklearn
 import joblib
-import logging as logger
+import logging
 from collections import defaultdict
 from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor, VotingRegressor
 from sklearn.neural_network import MLPClassifier, MLPRegressor
@@ -80,8 +80,8 @@ from bot import provider
 from bot import orders
 
 pp = pprint.PrettyPrinter()
-logger.basicConfig(
-    level=logger.INFO,
+logging.basicConfig(
+    level=logging.INFO,
     format='%(asctime)s.%(msecs)03d [%(levelname)s] %(module)s - %(funcName)s: %(message)s',
     datefmt='%Y-%m-%d %H:%M:%S',
 )
@@ -146,7 +146,7 @@ def get_contracts_of_type(ib, contract_type, limit=100):
             # ibs.Option('AMZN', '20201030', 3400, 'C', 'SMART'),
         ]
     else:
-        logger.info('Unexpected contract type', contract_type)
+        logging.info('Unexpected contract type', contract_type)
         sys.exit(1)
     return contracts
 
@@ -196,7 +196,7 @@ async def get_contracts_of_type_async(ib, contract_type, limit=100):
             # ibs.Option('AMZN', '20201030', 3400, 'C', 'SMART'),
         ]
     else:
-        logger.info('Unexpected contract type', contract_type)
+        logging.info('Unexpected contract type', contract_type)
         sys.exit(1)
     return contracts
 
@@ -208,13 +208,13 @@ def run_trading(contract_type="options",
                 use_obv=False,
                 use_ema=False
                 ):
-    logger.info('run trading...')
+    logging.info('run trading...')
     ib = connect(contract_type=contract_type, client_id=23)
 
-    logger.info('check if mkt data')
+    logging.info('check if mkt data')
     while contract_type == 'options' and not ignore_market_data \
             and not util.is_options_market_data_available(ib):
-        logger.info('market data is not available, wait 30 seconds and try again')
+        logging.info('market data is not available, wait 30 seconds and try again')
         ib.sleep(30)
 
     # contracts = suggest_futures(ib)[:3]
@@ -255,20 +255,20 @@ async def run_trading_async(contract_type="options",
                             use_obv=False,
                             use_ema=False
                             ):
-    logger.warning("run async trading...")
+    logging.warning("run async trading...")
 
     # ib_task = asyncio.create_task(
     #     connect_async(contract_type=contract_type, client_id=23),
     #     name='connect'
     # )
-    # logger.info(type(ib_task), ib_task)
+    # logging.info(type(ib_task), ib_task)
     ib = await connect_async(contract_type=contract_type, client_id=23)
-    logger.info('check if mkt data')
+    logging.info('check if mkt data')
     while contract_type == 'options' \
             and not ignore_market_data \
             and not util.is_options_market_data_available(ib):
-        logger.info('market data is not available, wait 30 seconds and try again')
-        logger.info(type(ib.sleep(30)))
+        logging.info('market data is not available, wait 30 seconds and try again')
+        logging.info(type(ib.sleep(30)))
         await ib.sleep(30)
 
     # contracts = suggest_futures(ib)[:3]
@@ -329,10 +329,10 @@ def flatten_positions():
         # if position.contract.symbol != 'GC':
         #     continue
         if position.account != account:
-            logger.info('skip position in account %s' % position.account)
+            logging.info('skip position in account %s' % position.account)
             continue
 
-        logger.info('position', position)
+        logging.info('position', position)
         contract = position.contract
         ib.qualifyContracts(contract)
         totalQuantity = abs(position.position)
@@ -345,10 +345,10 @@ def flatten_positions():
 
         order = ibs.MarketOrder(action, totalQuantity, account=account, tif='GTC',
                                 outsideRth=True)
-        logger.info('order', order)
+        logging.info('order', order)
         trade = ib.placeOrder(contract, order)
-        logger.info('trade', trade)
-        logger.info(f'Flatten Position: {action} {totalQuantity} {contract.localSymbol}')
+        logging.info('trade', trade)
+        logging.info(f'Flatten Position: {action} {totalQuantity} {contract.localSymbol}')
         assert trade in ib.trades(), 'trade not listed in ib.trades'
     util.slack_message('Flattened positions')
 
@@ -360,7 +360,7 @@ def cancel_open_orders():
     for open_order in open_orders:
         if open_order.account != account:
             continue
-        logger.info('oo', open_order)
+        logging.info('oo', open_order)
         ib.cancelOrder(open_order)
 
 
@@ -372,21 +372,21 @@ def analyze_trades_csv(filename):
         if row['Account'] != account:
             continue
 
-        logger.info('Trade: %s %s @ %s %s' % (row['Action'], row['Underlying'], row['Strike'], row['Put/Call']))
+        logging.info('Trade: %s %s @ %s %s' % (row['Action'], row['Underlying'], row['Strike'], row['Put/Call']))
 
 
 def analyze_trades(date_str):
-    logger.info('analyze_trades')
+    logging.info('analyze_trades')
     account = conf.ACCOUNT
     ib = connect()
 
     trades = ib.trades()
 
-    # logger.info(len(trades))
+    # logging.info(len(trades))
     # return
 
     for trade in trades:
-        # logger.info('trade', trade)
+        # logging.info('trade', trade)
 
         if trade.order.account != account:
             continue
@@ -395,11 +395,11 @@ def analyze_trades(date_str):
         if date_str not in fill_dates:
             continue
 
-        logger.info('Trade: %s, %s' % (trade.contract.localSymbol, trade.order.account))
+        logging.info('Trade: %s, %s' % (trade.contract.localSymbol, trade.order.account))
 
         for fill in trade.fills:
             # import pdb ; pdb.set_trace()
-            logger.info('\tFill: %s, %s' % (fill.time, fill.execution.avgPrice))
+            logging.info('\tFill: %s, %s' % (fill.time, fill.execution.avgPrice))
         # import pdb ; pdb.set_trace()
 
 
@@ -410,11 +410,11 @@ def pull_training_data(filename):
     # contract = ibs.Stock('AAPL', 'SMART', 'USD')
     # contract = ibs.Option('FB', '20201009', 260, 'C', 'SMART')
     # contracts = suggest_options(ib, limit=3, stocks_limit=3)
-    # logger.info('lets pull training data for %s contracts' % len(contracts))
+    # logging.info('lets pull training data for %s contracts' % len(contracts))
 
     # contracts = suggest_options(ib, limit=10, stocks_limit=2,
     #                             limit_strike=2, no_filter=True)
-    # logger.info('contracts', contracts)
+    # logging.info('contracts', contracts)
     # contracts = [ibs.Option('AMZN', '20201016', 3300, 'C', 'SMART')]
     # contracts = [ibs.Stock('AAPL', 'SMART', 'USD')]
     contracts = [
@@ -447,20 +447,20 @@ def pull_training_data(filename):
         part = analyzer.pull_training_data(ib, contract, '2020-10-1', '2020-10-19', read_cache=False)
         # X, Y = analyzer.pull_training_data_for_date(ib, contract, '2020-10-05', read_cache=False)
 
-        logger.info('\n\n\n\t==== %s/%s %s ====\n\n\n' % (i, len(contracts), contract.localSymbol))
-        logger.info(contract)
-        logger.info(part)
-        logger.info(part.describe())
+        logging.info('\n\n\n\t==== %s/%s %s ====\n\n\n' % (i, len(contracts), contract.localSymbol))
+        logging.info(contract)
+        logging.info(part)
+        logging.info(part.describe())
 
         if df is None:
             df = part
         else:
             df = pd.concat([df, part])
 
-    logger.info(df)
-    logger.info(df.describe())
+    logging.info(df)
+    logging.info(df.describe())
     df.to_pickle(filename)
-    logger.info('saved to', filename)
+    logging.info('saved to', filename)
 
     # import pdb ; pdb.set_trace()
     # idx = (X_full['trailing_volume'] > X_full['trailing_volume'].mean()) & (X_full['adx'] > 40) & (X_full['di+'] > 40)
@@ -475,12 +475,12 @@ def pull_training_data(filename):
 def train(filename):
     df = pd.read_pickle(filename)
     # df = df.loc[df['trailing_volume'] > 100]
-    logger.info(df.describe())
+    logging.info(df.describe())
 
     # labels = np.array(df['upcoming_high'])
     labels = np.array(df['upcoming_high_percent'])
     column_list = list(df.columns)
-    logger.info('column_list', column_list)
+    logging.info('column_list', column_list)
 
     # feature_list = ['adx', 'obv', 'di+', 'di-', 'cross_signal_int', 'cross_buy_state', 'expiry_days']
     feature_list = [
@@ -509,25 +509,25 @@ def train(filename):
     split = int(df.shape[0] * .8)
     train_features, train_labels, test_features, test_labels = features[:split], labels[:split], features[
                                                                                                  split:], labels[split:]
-    logger.info('== train ==')
-    logger.info(train_features.shape)
-    logger.info(train_labels.shape)
-    logger.info('== test ==')
-    logger.info(test_features.shape)
-    logger.info(test_labels.shape)
+    logging.info('== train ==')
+    logging.info(train_features.shape)
+    logging.info(train_labels.shape)
+    logging.info('== test ==')
+    logging.info(test_features.shape)
+    logging.info(test_labels.shape)
 
     baseline_errors = abs(baseline_pred - test_labels)
-    logger.info('Average baseline error: ', round(np.mean(baseline_errors), 2))
+    logging.info('Average baseline error: ', round(np.mean(baseline_errors), 2))
     clf = RandomForestRegressor(n_estimators=1000, random_state=42)
     # clf = svm.SVR()
     clf.fit(train_features, train_labels)
 
     predictions = clf.predict(test_features)
-    # logger.info('predictions', predictions)
+    # logging.info('predictions', predictions)
     errors = abs(predictions - test_labels)
-    logger.info('Mean Absolute Error:', round(np.mean(errors), 2))
+    logging.info('Mean Absolute Error:', round(np.mean(errors), 2))
     mse = sklearn.metrics.mean_squared_error(test_labels, predictions)
-    # logger.info('mse', mse)
+    # logging.info('mse', mse)
 
     plt.scatter(predictions, test_labels)
     plt.show()
@@ -547,9 +547,9 @@ def print_tickers():
     tick_by_ticks = [ib.reqTickByTickData(c, 'BidAsk') for c in contracts]
     while ib.sleep(1):
         if len(contracts) > 2:
-            logger.info('--')
+            logging.info('--')
         for tt in tick_by_ticks:
-            logger.info('%s\tbid=%s\task=%s\tbidSize=%s\taskSize=%s\tlast=%s' % (
+            logging.info('%s\tbid=%s\task=%s\tbidSize=%s\taskSize=%s\tlast=%s' % (
                 tt.contract.localSymbol, tt.bid, tt.ask, tt.bidSize, tt.askSize, tt.last))
 
 
@@ -570,11 +570,11 @@ def place_buy_sell_order():
 
     trade = orders.buy(ib, account, contract, 1, num_ticks=2, backtest=False)
     ib.sleep(2)
-    logger.info(orders.pretty_string_trade(trade))
+    logging.info(orders.pretty_string_trade(trade))
 
     trade = orders.sell(ib, account, contract, 1, num_ticks=2, backtest=False)
     ib.sleep(10)
-    logger.info(orders.pretty_string_trade(trade))
+    logging.info(orders.pretty_string_trade(trade))
 
 
 def print_trades():
@@ -602,7 +602,7 @@ def print_positions():
     for p in ib.positions():
         if p.account != account:
             continue
-        logger.info(p)
+        logging.info(p)
 
 
 def watch_list_suggest_options():
@@ -611,7 +611,7 @@ def watch_list_suggest_options():
 
     wl = OptionsWatchlist(ib, account)
     for option in wl.candidates():
-        logger.info('candidate', option.localSymbol)
+        logging.info('candidate', option.localSymbol)
 
 
 def print_today_bars():
@@ -627,7 +627,7 @@ def run_test():
         ibs.Stock('AMZN', 'SMART', 'USD'),
         ibs.Option('AMZN', '20201023', 3200, 'C', 'SMART'),
     ]
-    logger.info(util.min_increment(ib, contracts[1]))
+    logging.info(util.min_increment(ib, contracts[1]))
 
 
 def run_pnl():
@@ -643,11 +643,11 @@ def run_pnl():
         pnl_singles.append(foo)
     ib.sleep(2)
     # while True:
-    logger.info('=' * 120)
+    logging.info('=' * 120)
 
-    logger.info(pnl)
+    logging.info(pnl)
     for pnl_single in pnl_singles:
-        logger.info(pnl_single)
+        logging.info(pnl_single)
         # ib.sleep(10)
 
 
@@ -663,25 +663,25 @@ def run_pnl_as():
         pnl_singles.append(ib.reqPnLSingle(account, '', contract.conId))
 
     while ib.sleep(1):
-        logger.info('--')
-        logger.info(pnl)
+        logging.info('--')
+        logging.info(pnl)
         for pnl_single in pnl_singles:
-            logger.info(pnl_single)
+            logging.info(pnl_single)
 
 
 def generate_ranges(filename, num_days, contract_type):
     ib = connect()
     contracts = get_contracts_of_type(ib, contract_type)
-    logger.info(contracts)
-    logger.info('gen ranges', filename, num_days, contracts)
+    logging.info(contracts)
+    logging.info('gen ranges', filename, num_days, contracts)
     # for indicator in ['obv', 'adx', 'di+', 'di-']:
     for indicator in ['ema_diff_percent_abs']:
-        logger.info('')
-        logger.info('====', indicator, '====')
-        logger.info('')
+        logging.info('')
+        logging.info('====', indicator, '====')
+        logging.info('')
         for contract in contracts:
             value_range = ranges.get_ranges(ib, contract, '1 hour', indicator, num_days)
-            logger.info('--', contract, '--')
+            logging.info('--', contract, '--')
             pp.plogger.info(value_range)
 
 
@@ -700,19 +700,19 @@ def dump_cross_data(filename, num_days, contract_type):
     records = []
 
     for contract in contracts:
-        logger.info('dump cross data', contract)
+        logging.info('dump cross data', contract)
 
         df = analyzer.pull_training_data(ib, contract, start_dt_str, end_dt_str, bar_size=bar_size, read_cache=True,
                                          use_rth=False)
-        # logger.info(df)
+        # logging.info(df)
         # import pdb ; pdb.set_trace()
 
         r = len(df) - 2 * window_size
         for i in range(r):
             if i % 10 == 0:
-                logger.info('.', end='', flush=True)
+                logging.info('.', end='', flush=True)
             if i % 500 == 0:
-                logger.info('%s/%s (%.1f%%)' % (i, r, float(i * 100) / r))
+                logging.info('%s/%s (%.1f%%)' % (i, r, float(i * 100) / r))
             idx = i + window_size
             row = df.iloc[idx]
 
@@ -773,7 +773,7 @@ def dump_cross_data(filename, num_days, contract_type):
                 item['is_peak'] = int(d['datetime'] == dt_peak)
 
                 if item['percent_of_peak'] > 1:
-                    logger.info('unexpected peak > 1!')
+                    logging.info('unexpected peak > 1!')
                     import pdb;
                     pdb.set_trace()
 
@@ -791,11 +791,11 @@ def train_cross_data(filename):
     # df = (df[(df.cross_type == 'buy') & (df.delta > .01)]).head(5000)
     df = (df[(df.cross_type == 'buy')]).head(5000)
     df = df.sort_values(['from_peak_0_datetime'])
-    logger.info(df.describe())
+    logging.info(df.describe())
 
     labels = np.array(df['percent_of_peak'])
     column_list = list(df.columns)
-    # logger.info('column_list', column_list)
+    # logging.info('column_list', column_list)
 
     feature_list = []
     for i in range(10):
@@ -803,7 +803,7 @@ def train_cross_data(filename):
         # for feature in ['percent_increase', 'obv_percent_delta', 'adx', 'di+']:
         for feature in ['di+', 'percent_increase']:
             feature_list.append('from_peak_%s_%s' % (i, feature))
-    logger.info('feature_list', feature_list)
+    logging.info('feature_list', feature_list)
 
     features = df
     for column_name in column_list:
@@ -817,12 +817,12 @@ def train_cross_data(filename):
     train_features, train_labels, test_features, test_labels = features[:split], labels[:split], features[
                                                                                                  split:], labels[split:]
 
-    logger.info('== train ==')
-    logger.info(train_features.shape)
-    logger.info(train_labels.shape)
-    logger.info('== test ==')
-    logger.info(test_features.shape)
-    logger.info(test_labels.shape)
+    logging.info('== train ==')
+    logging.info(train_features.shape)
+    logging.info(train_labels.shape)
+    logging.info('== test ==')
+    logging.info(test_features.shape)
+    logging.info(test_labels.shape)
 
     reg1 = GradientBoostingRegressor(random_state=1, n_estimators=100)
     reg2 = RandomForestRegressor(random_state=1, n_estimators=100)
@@ -836,27 +836,27 @@ def train_cross_data(filename):
     joblib.dump(clf, 'ema_model.joblib')
 
     predictions = clf.predict(test_features)
-    # logger.info('predictions', predictions)
+    # logging.info('predictions', predictions)
     errors = abs(predictions - test_labels)
-    logger.info('Mean Absolute Error:', round(np.mean(errors), 2))
+    logging.info('Mean Absolute Error:', round(np.mean(errors), 2))
     mse = sklearn.metrics.mean_squared_error(test_labels, predictions)
-    # logger.info('mse', mse)
+    # logging.info('mse', mse)
 
     # chart_y = test_labels
-    logger.info(predictions)
-    logger.info(df['percent_of_peak'])
+    logging.info(predictions)
+    logging.info(df['percent_of_peak'])
     chart_y = np.array(df['percent_of_peak'])[split:]
-    logger.info('max', max(chart_y))
+    logging.info('max', max(chart_y))
     plt.scatter(predictions, chart_y)
     plt.show()
 
 
 if __name__ == '__main__':
-    logger.critical("docopt for args")
-    logger.info("Starting args...")
+    logging.critical("docopt for args")
+    logging.info("Starting args...")
 
     args = docopt(__doc__)
-    logger.info('data from logs: %s', args)
+    logging.info('data from logs: %s', args)
 
     if args['trade']:
         asyncio.run(run_trading_async(args['--type'], args['--backtest'], args['--ignore-market-data'], args['--limit'],
@@ -905,8 +905,8 @@ if __name__ == '__main__':
     else:
         raise Exception('unhandled command')
 
-    logger.fatal("Exiting system...")
-    logger.shutdown()
+    logging.fatal("Exiting system...")
+    logging.shutdown()
 
 # run_paper_trading()
 # flatten_positions()
