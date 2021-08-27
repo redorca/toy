@@ -82,8 +82,9 @@ from bot import orders
 pp = pprint.PrettyPrinter()
 logging.basicConfig(
     level=logging.INFO,
-    format='%(asctime)s.%(msecs)03d [%(levelname)s] %(module)s - %(funcName)s: %(message)s',
-    datefmt='%Y-%m-%d %H:%M:%S',
+    format='%(asctime)s.%(msecs)03d [%(levelname).3s] %(module)s - %(funcName)s: %('
+           'message)s',
+    datefmt='%H:%M:%S',  #%Y-%m-%d
 )
 
 
@@ -251,24 +252,25 @@ def run_trading(contract_type="options",
 async def run_trading_async(contract_type="options",
                             backtest=False,
                             ignore_market_data=True,
-                            limit=None,
+                            limit=100,
                             use_obv=False,
                             use_ema=False
                             ):
-    logging.warning("run async trading...")
-
+    logging.info("run async trading...")
+    start = time.perf_counter()
     # ib_task = asyncio.create_task(
     #     connect_async(contract_type=contract_type, client_id=23),
     #     name='connect'
     # )
     # logging.info(type(ib_task), ib_task)
     ib = await connect_async(contract_type=contract_type, client_id=23)
+    logging.warning("USING DELAYED MARKET DATA DURING TESTING")
+    ib.reqMarketDataType(3)
     logging.info('check if mkt data')
     while contract_type == 'options' \
             and not ignore_market_data \
             and not util.is_options_market_data_available(ib):
         logging.info('market data is not available, wait 30 seconds and try again')
-        logging.info(type(ib.sleep(30)))
         await ib.sleep(30)
 
     # contracts = suggest_futures(ib)[:3]
@@ -282,6 +284,12 @@ async def run_trading_async(contract_type="options",
     contracts = []
     for ct in contract_type.split(','):
         contracts += await get_contracts_of_type_async(ib, ct, limit=int(limit))
+
+    logging.info(f"retrieving contracts data took {time.perf_counter() - start:0.3f} "
+                 f"seconds")
+    if ib.isConnected:
+        ib.disconnect()
+    return "dave says done"
 
     if backtest:
         trader = Trader(ib, conf.ACCOUNT, contracts,

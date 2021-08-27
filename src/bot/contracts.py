@@ -1,12 +1,21 @@
 import asyncio
 import datetime
+import logging
 import time
 
+from numpy import isnan
 import ib_insync as ibs
 
 from bot import util
 from bot import conf
 
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s.%(msecs).3d [%(levelname).3s] %(module)s - %(funcName)s: %('
+           'message)s',
+    # datefmt='%Y-%m-%d %H:%M:%S',
+    datefmt='%H:%M:%S',
+)
 
 def suggest_forex(ib):
     contracts = [
@@ -111,11 +120,12 @@ async def suggest_stocks_async(ib):
     #     tasks.append(ib.qualifyContractsAsync(c))
     # foo = await asyncio.gather(*tasks)
     # qcontracts = await ib.qualifyContractsAsync(*contracts)
-    print(contracts)
+    logging.debug(contracts)
     begin = time.perf_counter()
     contracts =  await ib.qualifyContractsAsync(*contracts)
-    print("qualifying contracts took {:.3f} seconds".format(time.perf_counter() - begin))
-    print(contracts)
+    logging.debug("qualifying contracts took {:.3f} seconds".format(time.perf_counter() -
+                                                                begin))
+    logging.info(contracts)
 
     return contracts
 
@@ -251,9 +261,14 @@ async def suggest_options_async(ib, limit=None, stocks_limit=None, limit_strike=
     md_dict = {}
     print('req tickers')
     tickers = await ib.reqTickersAsync(*stocks)
+    # TODO I *think* we want to set each of these expiry&strikes call as a
+    # separate task, and launch them with a collect or as_completed.
+
     for i, (stock, ticker) in enumerate(zip(stocks, tickers)):
         print('get chains', stock.localSymbol)
+        start = time.perf_counter()
         expiry, strikes = await get_expiry_and_strikes_async(ib, ticker, stock)
+        logging.debug(f"expiry & strikes takes {time.perf_counter()-start} secs")
         print('got:', expiry, strikes)
         if not expiry:
             continue
@@ -290,7 +305,13 @@ async def suggest_options_async(ib, limit=None, stocks_limit=None, limit_strike=
         v = md_dict[co.conId]['volume']
         oi = md_dict[co.conId]['open_interest']
 
-        if not (abs(delta) > conf.MIN_DELTA and abs(delta) < conf.MAX_DELTA):
+        # if isnan(delta) or isnan(v) or isnan(oi):
+        #     logging.warning(f"missing data in {stock.symbol}, skipping")
+        #     continue
+        try:
+            if not (abs(delta) > conf.MIN_DELTA and abs(delta) < conf.MAX_DELTA):
+                continue
+        except TypeError:  #delta can be a nan after hours
             continue
 
         filtered_candidates.append(co)
@@ -312,8 +333,9 @@ async def suggest_options_async(ib, limit=None, stocks_limit=None, limit_strike=
 
     # import pdb ; pdb.set_trace()
     print('qualify')
-    [ib.qualifyContracts(o) for o in candidate_options]
-    print('done')
+    candidate_options = [await ib.qualifyContractsAsync(o) for o in candidate_options]
+    for co in candidate_options:
+        print(co)
     return candidate_options
 
 
@@ -500,15 +522,31 @@ async def get_expiry_and_strikes_async(ib, ticker, stock):
     cached = util.get_cached_json(key)
     if cached:
         return cached['expiry'], cached['strikes']
-
+    start = time.perf_counter()
     chains = await ib.reqSecDefOptParamsAsync(stock.symbol, '', stock.secType,
         stock.conId)
-    print('got %s chains' % (len(chains)))
+    logging.debug(f"reqSecDefOptParamsAsync for {stock.symbol} took "
+                  f"{time.perf_counter()-start} secs")
+    logging.info(f'got {len(chains)} chains')
 
     print('get market price')
     tries = 5
+
+    ticker = ib.reqMktData(stock, "", True)
     while True:
+        await asyncio.sleep(.1)
+        price = ticker.last
+        if price > 0:
+            break
+        tries -= 1
+        if tries == 0:
+            print("couldn't get price, skip it", stock)
+            return None, None
+
+
+    while False:  # this wasn't working for me to generate a price
         price = ticker.marketPrice()
+        price = ticker.last
         # price = 2726
         if price > 0:
             break
@@ -516,7 +554,7 @@ async def get_expiry_and_strikes_async(ib, ticker, stock):
         if tries == 0:
             print("couldn't get price, skip it", stock)
             return None, None
-        await asyncio.sleep(.1)
+        await asyncio.sleep(.51)
 
     print('--> get ticker')
     print('stock', stock)

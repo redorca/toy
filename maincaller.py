@@ -13,7 +13,7 @@ result = asyncio.run(
         use_obv=True,
         use_ema=False,
     ),
-    debug=True,
+    debug=False,
 )
 
 call_chain = """
