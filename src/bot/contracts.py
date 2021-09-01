@@ -284,14 +284,26 @@ async def suggest_options_async(ib, limit=None, stocks_limit=None, limit_strike=
         # start = time.perf_counter()
         new_candidate_options = await ib.qualifyContractsAsync(*new_candidate_options)
         print(f"ib.qualifyContractsAsync took {time.perf_counter() - start}") #0.358
+        option_data_tasks = set()
+        start = time.perf_counter()
+        num_options = 0
         if not no_filter:
             for option in new_candidate_options:
-                start = time.perf_counter()
-                md_opt = await get_option_market_data_async(ib, ticker, option)
-                print(f"get_option_market_data_async took {time.perf_counter()-start}")
-                print('->', option.strike, option.right, md_opt)
-                #get_option_market_data_async took 0.0006509020004159538
-                md_dict[option.conId] = md_opt
+                option_data_tasks.add(asyncio.create_task(
+                    get_option_market_data_async(ib, ticker, option))
+                )
+                num_options += 1
+                asyncio.sleep(0.05) # fire 20/sec?
+            # for option in new_candidate_options:
+            #     start = time.perf_counter()
+            #     md_opt = await get_option_market_data_async(ib, ticker, option)
+            #     print(f"get_option_market_data_async took {time.perf_counter()-start}")
+            #     print('->', option.strike, option.right, md_opt)
+            #     #get_option_market_data_async took 0.0006509020004159538
+            #     md_dict[option.conId] = md_opt
+        md_opts = await asyncio.gather(*option_data_tasks)
+        print(f"gathered {num_options} option data records in"
+              f" {time.perf_counter()-start} secs.")
         candidate_options += new_candidate_options
 
     logging.info( # took 123 seconds with wrapper.error.1014  Warning 10167
@@ -384,10 +396,10 @@ async def get_option_market_data_async(ib, ticker, option):
     #     return cached
 
     md = ib.reqMktData(option, genericTickList='100,101,104,106')
-    tries = 5
+    tries = 10
     found = False
     while True:
-        await asyncio.sleep(0.1)
+        await asyncio.sleep(0.2)
         if md.volume > 0 and (md.callOpenInterest + md.putOpenInterest > 0):
             found = True
             break
