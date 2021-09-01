@@ -80,12 +80,12 @@ from bot import provider
 from bot import orders
 
 pp = pprint.PrettyPrinter()
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s.%(msecs)03d [%(levelname).3s] %(module)s - %(funcName)s: %('
-           'message)s',
-    datefmt='%H:%M:%S',  #%Y-%m-%d
-)
+# logging.basicConfig(
+#     level=logging.INFO,
+#     format='%(asctime)s.%(msecs)03d [%(levelname).3s] %(module)s - %(funcName)s: %('
+#            'message)s',
+#     datefmt='%H:%M:%S',  #%Y-%m-%d
+# )
 
 
 def get_contracts(ib):
@@ -264,6 +264,7 @@ async def run_trading_async(contract_type="options",
     # )
     # logging.info(type(ib_task), ib_task)
     ib = await connect_async(contract_type=contract_type, client_id=23)
+    logging.debug(f"connection takes {time.perf_counter()-start} seconds")
     logging.warning("USING DELAYED MARKET DATA DURING TESTING")
     ib.reqMarketDataType(3)
     logging.info('check if mkt data')

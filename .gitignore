@@ -2,6 +2,7 @@
 archive/
 .DS_Store
 .idea/
+
 ### VirtualEnv template
 # Virtualenv
 # http://iamzed.com/2009/05/07/a-primer-on-virtualenv/
@@ -230,4 +231,4 @@ fabric.properties
 diskcache/
 log/
 
-build/
+build/!/secrets.txt

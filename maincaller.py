@@ -1,11 +1,19 @@
 """this is just a trick I use to call main and be able to debug in pycharm"""
 import asyncio
-import src.main
+import logging
+
+import main
 
 print("main caller")
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s.%(msecs)03d [%(levelname).3s] %(module)s.%(funcName)s.%('
+           'lineno)s: %(message)s',
+    datefmt='%H:%M:%S',  # %Y-%m-%d
+)
 
 result = asyncio.run(
-    src.main.run_trading_async(
+    main.run_trading_async(
         contract_type="options",
         backtest=False,
         ignore_market_data=True,
@@ -23,4 +31,8 @@ contracts:suggest_options = ib.reqTickers ->Async; ib.qualifyContracts->Async
 contracts:suggest_stocks = ib.qualifyContracts->Async
 contracts:get_expiry_and_strikes = ib.reqSecDefOptParams->Async
 contracts:marketPrice (no Async) 
+
+start = time.perf_counter()
+print(f" took {time.perf_counter() - start}")
+
 """
