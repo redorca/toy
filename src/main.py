@@ -264,7 +264,7 @@ async def run_trading_async(contract_type="options",
     # )
     # logging.info(type(ib_task), ib_task)
     ib = await connect_async(contract_type=contract_type, client_id=23)
-    logging.debug(f"connection takes {time.perf_counter()-start} seconds")
+    logging.info(f"connection takes {time.perf_counter()-start} seconds")
     logging.warning("USING DELAYED MARKET DATA DURING TESTING")
     ib.reqMarketDataType(3)
     logging.info('check if mkt data')
