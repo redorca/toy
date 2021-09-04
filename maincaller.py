@@ -1,16 +1,13 @@
 """this is just a trick I use to call main and be able to debug in pycharm"""
 import asyncio
 import logging
+import pathlib
 
+import loggingx
 import main
 
-print("main caller")
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s.%(msecs)03d [%(levelname).3s] %(module)s.%(funcName)s.%('
-           'lineno)s: %(message)s',
-    datefmt='%H:%M:%S',  # %Y-%m-%d
-)
+logging.basicConfig(level=logging.WARNING)
+logger = loggingx.logger(__file__, logging.DEBUG)
 
 result = asyncio.run(
     main.run_trading_async(

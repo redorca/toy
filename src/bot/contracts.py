@@ -9,13 +9,9 @@ import ib_insync as ibs
 from bot import util
 from bot import conf
 
-# logging.basicConfig(
-#     level=logging.WARNING,
-#     format='%(asctime)s.%(msecs).3d [%(levelname).3s] %(module)s - %(funcName)s: %('
-#            'message)s',
-#     # datefmt='%Y-%m-%d %H:%M:%S',
-#     datefmt='%H:%M:%S',
-# )
+import loggingx
+log_level = logging.DEBUG
+logger = loggingx.logger(__file__,log_level)
 
 def suggest_forex(ib):
     contracts = [
@@ -120,12 +116,12 @@ async def suggest_stocks_async(ib):
     #     tasks.append(ib.qualifyContractsAsync(c))
     # foo = await asyncio.gather(*tasks)
     # qcontracts = await ib.qualifyContractsAsync(*contracts)
-    logging.debug(contracts)
+    logger.debug(contracts)
     begin = time.perf_counter()
     contracts =  await ib.qualifyContractsAsync(*contracts)
-    logging.info("qualifying contracts took {:.3f} seconds".format(
+    logger.info("qualifying contracts took {:.3f} seconds".format(
         time.perf_counter() - begin))  # 0.234 secs
-    logging.info(contracts)
+    logger.info(contracts)
 
     return contracts
 
@@ -164,11 +160,11 @@ def suggest_all_options(ib):
         if r:
             qualified += r
 
-        print('q', len(qualified))
+        logger.debug('q', len(qualified))
         if len(qualified) > 200:
             break
 
-    print([c.conId for c in qualified])
+    logger.debug([c.conId for c in qualified])
 
     return qualified
 
@@ -181,28 +177,28 @@ def suggest_options(ib, limit=None, stocks_limit=None, limit_strike=4, no_filter
 
     candidate_options = []
     md_dict = {}
-    print('req tickers')
+    logger.info('req tickers')
     tickers = ib.reqTickers(*stocks)
     for i, (stock, ticker) in enumerate(zip(stocks, tickers)):
-        print('get chains', stock.localSymbol)
+        logger.debug('get chains', stock.localSymbol)
         expiry, strikes = get_expiry_and_strikes(ib, ticker, stock)
-        print('got:', expiry, strikes)
+        logger.debug('got:', expiry, strikes)
         if not expiry:
             continue
 
-        # print('strikes', strikes)
+        # logger.debug('strikes', strikes)
         new_candidate_options = []
         for strike in strikes[limit_strike:]:
             for right in ['C', 'P']:
                 option = option_cls(stock.symbol, expiry, strike, right, 'SMART')
                 new_candidate_options.append(option)
 
-        # print(new_candidate_options)
+        # logger.debug(new_candidate_options)
         ib.qualifyContracts(*new_candidate_options)
         if not no_filter:
             for option in new_candidate_options:
                 md_opt = get_option_market_data(ib, ticker, option)
-                print('->', option.strike, option.right, md_opt)
+                logger.debug('->', option.strike, option.right, md_opt)
                 md_dict[option.conId] = md_opt
         candidate_options += new_candidate_options
 
@@ -214,7 +210,7 @@ def suggest_options(ib, limit=None, stocks_limit=None, limit_strike=4, no_filter
 
     for co, ticker in zip(candidate_options, candidate_tickers):
         if not ticker or not ticker.modelGreeks:
-            print('no ticker or greeks for', co)
+            logger.warn('no ticker or greeks for', co)
             continue
 
         delta = ticker.modelGreeks.delta
@@ -226,7 +222,7 @@ def suggest_options(ib, limit=None, stocks_limit=None, limit_strike=4, no_filter
             continue
 
         filtered_candidates.append(co)
-        print('candidate\t%s\t%s\t%s\t%s' % (co.localSymbol, v, oi, delta))
+        logger.info('candidate\t%s\t%s\t%s\t%s' % (co.localSymbol, v, oi, delta))
 
     candidate_options = filtered_candidates
     # candidate_options.sort(key=lambda x:abs(.5 - abs(md_dict[x.conId]['delta'])))
@@ -240,10 +236,10 @@ def suggest_options(ib, limit=None, stocks_limit=None, limit_strike=4, no_filter
         v = md_dict[co.conId]['volume']
         oi = md_dict[co.conId]['open_interest']
         delta = md_dict[co.conId]['delta']
-        print('selected\t%s\t%s\t%s\t%s' % (co.localSymbol, v, oi, delta))
+        logger.info('selected\t%s\t%s\t%s\t%s' % (co.localSymbol, v, oi, delta))
 
     # import pdb ; pdb.set_trace()
-    print('qualify')
+    logger.debug('qualify')
     [ib.qualifyContracts(o) for o in candidate_options]
     print('done')
     return candidate_options
@@ -251,78 +247,96 @@ def suggest_options(ib, limit=None, stocks_limit=None, limit_strike=4, no_filter
 
 async def suggest_options_async(ib, limit=None, stocks_limit=None, limit_strike=4,
         no_filter=False):
+    logger.info("get stocks")
     stocks = (await suggest_stocks_async(ib))[:stocks_limit]
 
-    options = []
+    logger.info('get tickers')
     candidate_options = []
     md_dict = {}
-    print('req tickers')
     start = time.perf_counter()
     tickers = await ib.reqTickersAsync(*stocks)
-    print(f"ib.reqTickersAsync took {time.perf_counter() - start}")  #5+ secs
+    logger.debug(f"ib.reqTickersAsync took {time.perf_counter() - start}")  #5+ secs
 
+    logger.info('get available options')
     loop_start = time.perf_counter()
     strikes_tasks = set()
-    for i, (stock, ticker) in enumerate(zip(stocks, tickers)):
-        print('get chains', stock.localSymbol)
-        strikes_tasks.add(asyncio.create_task(
-            get_expiry_and_strikes_async(ib, ticker, stock))
+    i = 0
+    for ticker in tickers:
+        logger.debug(f'get options for {ticker.contract.localSymbol}')
+        strikes_tasks.add(
+            asyncio.create_task(get_expiry_and_strikes_async(ib, ticker))
         )
         await asyncio.sleep(0) # let's task get started
+        i += 1
     results = await asyncio.gather(*strikes_tasks)
-    print(f"got all stock chains in {time.perf_counter()-loop_start} secs")
+    logger.debug(f"got option chains for {i} securities in "
+                 f"{time.perf_counter()-loop_start:0.3f} secs")
     for stock, expiry, strikes in results:
-        print('got:', expiry, strikes)
+        logger.debug(f'{stock.localSymbol} {expiry}, {strikes}')
         if not expiry:
             continue
 
-        # print('strikes', strikes)
-        new_candidate_options = []
+        new_candidate_tasks = set()
+        start = time.perf_counter()
         for strike in strikes[limit_strike:]:
             for right in ['C', 'P']:
-                option = ibs.Option(stock.symbol, expiry, strike, right, 'SMART')
-                new_candidate_options.append(option)
-
-        # print(new_candidate_options)
-        start = time.perf_counter()
-        new_candidate_options = await ib.qualifyContractsAsync(*new_candidate_options)
-        print(f"{stock.symbol} ib.qualifyContractsAsync took"
-              f" {time.perf_counter() - start}")
-        #0.358
+                logger.debug("hi")
+                new_candidate_option = ibs.Option(
+                    stock.symbol, expiry, strike, right, 'SMART')
+                logger.debug("there")
+                new_candidate_tasks.add(asyncio.create_task(
+                    ib.qualifyContractsAsync(new_candidate_option)))
+                await asyncio.sleep(0) # give the new task a chance to run
+        new_candidate_options = await asyncio.gather(*new_candidate_tasks)
+        # note: this returns a list of lists of options,
+        # some lists are empty on strike prices that don't seem to exist
+        new_candidate_options = list(filter(lambda x: len(x)!=0, new_candidate_options))
+        new_candidate_options = list(map(lambda x: x[0], new_candidate_options))
+        logger.debug(f"{stock.symbol} ib.qualifyContractsAsync took"
+              f" {time.perf_counter() - start}")  #0.358
         option_data_tasks = set()
-        start = time.perf_counter()
         num_options = 0
+        start = time.perf_counter()
         if not no_filter:
             for option in new_candidate_options:
                 option_data_tasks.add(asyncio.create_task(
                     get_option_market_data_async(ib, ticker, option))
                 )
+                await asyncio.sleep(0) # let task start
                 num_options += 1
-                await asyncio.sleep(0) # fire 20/sec?
             # for option in new_candidate_options:
             #     start = time.perf_counter()
             #     md_opt = await get_option_market_data_async(ib, ticker, option)
-            #     print(f"get_option_market_data_async took {time.perf_counter()-start}")
-            #     print('->', option.strike, option.right, md_opt)
+            #     logger.debug(f"get_option_market_data_async took {time.perf_counter()-start}")
+            #     logger.debug('->', option.strike, option.right, md_opt)
             #     #get_option_market_data_async took 0.0006509020004159538
             #     md_dict[option.conId] = md_opt
+        assert False, "this is where you got frustrated and gave up for the day"
         md_opts = await asyncio.gather(*option_data_tasks)
-        # BUG BUG why are we computing this then not using it?
-        print(f"gathered {num_options} option data records in"
+        # BUG BUG need to merge option data values into candidate options
+        option_data_dict = []
+        for option_data in md_opts:
+            option_data_dict[option_data['option']] = dict(
+                volume=option_data['volume'],
+                open_interest=option_data['open_interest']
+            )
+        logger.debug(f"gathered {num_options+1} option data records in"
               f" {time.perf_counter()-start:0.3f} secs.")
-        candidate_options += new_candidate_options
+        candidate_options.extend(new_candidate_options)
+        candidate_options = option_data_dict
 
-    logging.info(
+    logger.info(
         # took 123 seconds with wrapper.error.1014  Warning 10167
         # 2021-09-02 took 17 seconds after creating tasks for expiry and strikes
-        f"looping all qualifyContractsAsync took {time.perf_counter()-loop_start}")
+        f"looping all qualifyContractsAsync took "
+        f"{time.perf_counter()-loop_start:0.3f}")
     if no_filter:
         return candidate_options[:limit]
 
     start = time.perf_counter()
-    candidate_tickers = await ib.reqTickersAsync(*candidate_options)
+    candidate_tickers = await ib.reqTickersAsync(*option_data_dict.keys())
     # 2021-09-02 ib.reqTickersAsync took 17.015 can this go into the loop as a task
-    print(f"ib.reqTickersAsync took {time.perf_counter() - start}") #6.5 sec
+    logger.debug(f"ib.reqTickersAsync took {time.perf_counter() - start}") #6.5 sec
     filtered_candidates = []
 
     for co, ticker in zip(candidate_options, candidate_tickers):
@@ -336,7 +350,7 @@ async def suggest_options_async(ib, limit=None, stocks_limit=None, limit_strike=
         oi = md_dict[co.conId]['open_interest']
 
         # if isnan(delta) or isnan(v) or isnan(oi):
-        #     logging.warning(f"missing data in {stock.symbol}, skipping")
+        #     logger.warning(f"missing data in {stock.symbol}, skipping")
         #     continue
         try:
             if not (abs(delta) > conf.MIN_DELTA and abs(delta) < conf.MAX_DELTA):
@@ -345,7 +359,7 @@ async def suggest_options_async(ib, limit=None, stocks_limit=None, limit_strike=
             continue
 
         filtered_candidates.append(co)
-        print('candidate\t%s\t%s\t%s\t%s' % (co.localSymbol, v, oi, delta))
+        logger.debug('candidate\t%s\t%s\t%s\t%s' % (co.localSymbol, v, oi, delta))
 
     candidate_options = filtered_candidates
     # candidate_options.sort(key=lambda x:abs(.5 - abs(md_dict[x.conId]['delta'])))
@@ -359,13 +373,13 @@ async def suggest_options_async(ib, limit=None, stocks_limit=None, limit_strike=
         v = md_dict[co.conId]['volume']
         oi = md_dict[co.conId]['open_interest']
         delta = md_dict[co.conId]['delta']
-        print('selected\t%s\t%s\t%s\t%s' % (co.localSymbol, v, oi, delta))
+        logger.debug('selected\t%s\t%s\t%s\t%s' % (co.localSymbol, v, oi, delta))
 
     # import pdb ; pdb.set_trace()
-    print('qualify')
+    logger.info('qualify')
     candidate_options = [await ib.qualifyContractsAsync(o) for o in candidate_options]
     for co in candidate_options:
-        print(co)
+        logger.debug(co)
     return candidate_options
 
 
@@ -383,7 +397,7 @@ def get_option_market_data(ib, ticker, option):
             found = True
             break
         tries -= 1
-        print('tries', tries)
+        logger.debug(f'tries {tries}')
         if tries == 0:
             break
 
@@ -413,7 +427,7 @@ async def get_option_market_data_async(ib, ticker, option):
             found = True
             break
         tries -= 1
-        print('tries', tries)
+        logger.debug(f'tries {tries}')
         if tries == 0:
             break
 
@@ -421,6 +435,7 @@ async def get_option_market_data_async(ib, ticker, option):
 
     # v, coi, poi = (1, 2, 3)
     md_data = {}
+    md_data['option'] = option
     md_data['volume'] = v
     md_data['open_interest'] = coi + poi
 
@@ -435,9 +450,9 @@ def get_expiry_and_strikes(ib, ticker, stock):
     #     return cached['expiry'], cached['strikes']
 
     chains = ib.reqSecDefOptParams(stock.symbol, '', stock.secType, stock.conId)
-    print('got %s chains' % (len(chains)))
+    logger.debug('got %s chains' % (len(chains)))
 
-    print('get market price')
+    logger.debug('get market price')
     tries = 5
     while ib.sleep(.1):
         price = ticker.marketPrice()
@@ -445,20 +460,20 @@ def get_expiry_and_strikes(ib, ticker, stock):
             break
         tries -= 1
         if tries == 0:
-            print("couldn't get price, skip it", stock)
+            logger.debug(f"couldn't get price, skip it {stock}")
             return None, None
-    print('--> get ticker')
-    print('stock', stock)
-    print('price', price)
+    logger.debug('--> get ticker')
+    logger.debug(f'stock {stock}')
+    logger.debug(f'price {price}')
 
     # make sure price is a number
     try:
         _ = price - 1
     except:
-        print('price is nan, skip')
+        logger.debug('price is nan, skip')
         return None, None
 
-    # print('chains', chains)
+    # logger.debug('chains', chains)
     if not chains:
         return None, None
 
@@ -486,74 +501,41 @@ def get_expiry_and_strikes(ib, ticker, stock):
     return expiry, strikes
 
 
-async def get_expiry_and_strikes_async(ib, ticker, stock):
-    key = 'expiry_and_strikes_%s' % (stock.localSymbol)
-    cached = util.get_cached_json(key)
-    cached = False  # TODO remove before production
-    if cached:
-        return cached['expiry'], cached['strikes']
+async def get_expiry_and_strikes_async(ib, ticker):
+    # key = 'expiry_and_strikes_%s' % (stock.localSymbol)
+    # cached = util.get_cached_json(key)
+    # cached = False  # TODO remove before production
+    # if cached:
+    #     return cached['expiry'], cached['strikes']
     start = time.perf_counter()
     chains = await ib.reqSecDefOptParamsAsync(
-        stock.symbol, '', stock.secType, stock.conId)
-    logging.debug(f"reqSecDefOptParamsAsync for {stock.symbol} took "
-                  f"{time.perf_counter()-start} secs")
-    logging.info(f'got {len(chains)} exchange chains')
+        ticker.contract.symbol, '', ticker.contract.secType, ticker.contract.conId)
+    logger.debug(f"getting all option chains (reqSecDefOptParamsAsync) "
+                 f"for {ticker.contract.symbol} "
+                 f'on {len(chains)} exchanges '
+                 f"took {time.perf_counter()-start:0.3f} secs")
 
+    # start filtering out unneeded option chains, starting with exchange
     chains = list(filter(lambda x: x.exchange=='SMART', chains))
-    print('SMART chains', chains)
+    logger.debug(f'{ticker.contract.symbol} SMART chains {chains}')
     if len(chains)==0:
         return None, None, None
 
     start = time.perf_counter()
     market_price = ticker.marketPrice()
-    logging.info(f'market price of {stock.symbol} = {market_price}, '
-                 f'took {time.perf_counter()-start} secs')
     if market_price > 0: # nan is common, but not > 0
         price = market_price
+        price_type = 'market price'
     elif ticker.last > 0:
         price = ticker.last
-        logging.info(f"using last price = {price}")
+        price_type = 'last price'
     else:
+        logger.warning(f"no available price for {ticker.contract.localSymbol}")
         return None, None, None
 
-    # tries = 5
-    # # ticker = ib.reqMktData(stock, "", snapshot=True)
-    # while True:
-    #     await asyncio.sleep(.1)
-    #     price = ticker.marketPrice()
-    #     if price > 0:
-    #         break
-    #     tries -= 1
-    #     if tries == 0:
-    #         print("couldn't get price, skip it", stock)
-    #         return None, None
-
-
-    while False:  # this wasn't working for me to generate a price
-        price = ticker.marketPrice()
-        # price = ticker.last
-        # price = 2726
-        if price > 0:
-            break
-        tries -= 1
-        if tries == 0:
-            print("couldn't get price, skip it", stock)
-            return None, None
-        await asyncio.sleep(.51)
-
-    print('--> get ticker')
-    print('stock', stock)
-    print('price', price)
-
-    # make sure price is a number
-    # try:
-    #     _ = price - 1
-    # except:
-    #     print('price is nan, skip')
-    #     return None, None
-    # if type(price) not in (int, float):
-    #     return None, None
-
+    logger.info(f'{ticker.contract.symbol} {price_type} {market_price:0.3f}, '
+                f'took {time.perf_counter() - start:0.3f} secs'
+    )
 
     target_chain = None
     for chain in chains:
@@ -567,8 +549,8 @@ async def get_expiry_and_strikes_async(ib, ticker, stock):
 
     expiry = min(target_chain.expirations[1:])
     first_itm_index = None
-    for i, s in enumerate(target_chain.strikes):
-        if s > price:
+    for i, strike in enumerate(target_chain.strikes):
+        if strike > price:
             first_itm_index = i
             break
     if first_itm_index is None: # this should never happen
@@ -576,8 +558,8 @@ async def get_expiry_and_strikes_async(ib, ticker, stock):
 
     n = 10
     strikes = target_chain.strikes[first_itm_index - n:first_itm_index + n + 1]
-    util.put_cached_json(key, {'expiry': expiry, 'strikes': strikes})
-    return stock, expiry, strikes
+    # util.put_cached_json(key, {'expiry': expiry, 'strikes': strikes})
+    return ticker.contract, expiry, strikes
 
 
 def suggest_ranked_options(ib, limit_pull, limit_return):
@@ -627,8 +609,8 @@ def suggest_futures_options(ib):
         price = ticker.marketPrice()
         target_chain = None
         for chain in chains:
-            print(chain.exchange, chain.expirations)
-            print(chain)
+            logger.debug(f"{chain.exchange}, {chain.expirations}")
+            logger.debug(chain)
             nearest_expiry = min(chain.expirations)
             if not target_chain or min(target_chain.expirations) > min(chain.expirations):
                 target_chain = chain
@@ -672,7 +654,7 @@ def rank_contracts(ib, contracts):
     for contract in contracts:
         ib.qualifyContracts(contract)
         volume, pct = get_volume(ib, contract)
-        print('volume', contract.symbol, volume)
+        logger.debug(f'volume {contract.symbol}, {volume}')
         results[contract.conId] = {
             'contract': contract,
             'symbol': contract.symbol,
@@ -697,7 +679,7 @@ class OptionsWatchlist:
         for i in range(len(stocks)):
             stock, ticker = [l[i] for l in [stocks, tickers]]
             expiry, strikes = get_expiry_and_strikes(self.ib, ticker, stock)
-            print(stock.symbol, ticker.last, expiry, strikes)
+            logger.debug(f"{stock.symbol}, {ticker.last}, {expiry}, {strikes}")
 
             for strike in strikes:
                 for right in ['C', 'P']:
