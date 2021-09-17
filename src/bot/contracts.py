@@ -280,10 +280,8 @@ async def suggest_options_async(ib, limit=None, stocks_limit=None, limit_strike=
         start = time.perf_counter()
         for strike in strikes[limit_strike:]:
             for right in ['C', 'P']:
-                logger.debug("hi")
                 new_candidate_option = ibs.Option(
                     stock.symbol, expiry, strike, right, 'SMART')
-                logger.debug("there")
                 new_candidate_tasks.add(asyncio.create_task(
                     ib.qualifyContractsAsync(new_candidate_option)))
                 await asyncio.sleep(0) # give the new task a chance to run
@@ -311,9 +309,11 @@ async def suggest_options_async(ib, limit=None, stocks_limit=None, limit_strike=
             #     logger.debug('->', option.strike, option.right, md_opt)
             #     #get_option_market_data_async took 0.0006509020004159538
             #     md_dict[option.conId] = md_opt
-        assert False, "this is where you got frustrated and gave up for the day"
         md_opts = await asyncio.gather(*option_data_tasks)
+
         # BUG BUG need to merge option data values into candidate options
+        assert False, "this is where you got frustrated and gave up for the day"
+
         option_data_dict = []
         for option_data in md_opts:
             option_data_dict[option_data['option']] = dict(
@@ -427,7 +427,7 @@ async def get_option_market_data_async(ib, ticker, option):
             found = True
             break
         tries -= 1
-        logger.debug(f'tries {tries}')
+        # logger.debug(f'tries {tries}')
         if tries == 0:
             break
 
@@ -599,12 +599,32 @@ def suggest_futures(ib):
     return contracts
 
 
+async def suggest_futures_async(ib):
+    contracts = [
+        ibs.Future('NQ', '20210917', 'GLOBEX'),
+        ibs.Future('ES', '20210917', 'GLOBEX'),
+        ibs.Future('GC', '20210827', 'NYMEX'),
+        ibs.Future('SI', '2020928', 'NYMEX', currency='USD', multiplier=5000),
+        ibs.Future('RTY', '20210917', 'GLOBEX'),
+
+        # ibs.Future('CL', '20210121', 'NYMEX'),
+        # ibs.Future('BRR', '20201127', 'CMECRYPTO'),
+        # ibs.Future('VIX', '20201021', 'CFE'),
+    ]
+    [await ib.qualifyContractsAsync(c) for c in contracts]
+    return contracts
+
+
 def suggest_futures_options(ib):
     futures = suggest_futures(ib)
 
     futures_options = []
     for contract in futures:
-        chains = ib.reqSecDefOptParams(contract.symbol, contract.exchange, contract.secType, contract.conId)
+        chains = ib.reqSecDefOptParams(contract.symbol,
+            contract.exchange,
+            contract.secType,
+            contract.conId
+        )
         [ticker] = ib.reqTickers(contract)
         price = ticker.marketPrice()
         target_chain = None
@@ -620,7 +640,51 @@ def suggest_futures_options(ib):
                 strike = s
                 break
         for right in ['C', 'P']:
-            futures_options.append(ibs.FuturesOption(contract.symbol, expiry, strike, right, contract.exchange))
+            futures_options.append(ibs.FuturesOption(contract.symbol,
+                expiry,
+                strike,
+                right,
+                contract.exchange
+            )
+            )
+    return futures_options
+
+
+async def suggest_futures_options_async(ib):
+    futures = await suggest_futures_async(ib)
+
+    futures_options = []
+    for contract in futures:
+        chains = await ib.reqSecDefOptParamsAsync(contract.symbol,
+            contract.exchange,
+            contract.secType,
+            contract.conId
+        )
+        [ticker] = await ib.reqTickersAsync(contract)
+        price = ticker.marketPrice()
+        target_chain = None
+        for chain in chains:
+            # logger.debug(f"{chain.exchange}, {chain.expirations}")
+            logger.debug(chain)
+            nearest_expiry = min(chain.expirations)
+            if not target_chain or min(target_chain.expirations) > min(chain.expirations):
+                target_chain = chain
+        if target_chain is None:
+            continue
+            logger.warning("whoops, what's going on")
+        for s in target_chain.strikes:
+            expiry = min(target_chain.expirations)
+            if s > price:
+                strike = s
+                break
+        for right in ['C', 'P']:
+            futures_options.append( ibs.FuturesOption(contract.symbol,
+                expiry,
+                strike,
+                right,
+                contract.exchange
+                )
+            )
     return futures_options
 
 

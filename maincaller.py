@@ -1,4 +1,4 @@
-"""this is just a trick I use to call main and be able to debug in pycharm"""
+"""this is just a shim I use to call main and be able to debug in pycharm"""
 import asyncio
 import logging
 import pathlib
@@ -11,7 +11,7 @@ logger = loggingx.logger(__file__, logging.DEBUG)
 
 result = asyncio.run(
     main.run_trading_async(
-        contract_type="options",
+        contract_type="futures_options",
         backtest=False,
         ignore_market_data=True,
         limit=None,

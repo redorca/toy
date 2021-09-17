@@ -62,7 +62,8 @@ from bot.analyzer import TechnicalAnalyzer, TrendAnalyzer
 from bot.contracts import (OptionsWatchlist,
                            suggest_stocks, suggest_stocks_async,
                            suggest_options, suggest_options_async,
-                           suggest_futures, suggest_futures_options,
+                           suggest_futures,
+                           suggest_futures_options, suggest_futures_options_async,
                            suggest_all_options, suggest_forex,
                            suggest_ranked_options, suggest_micro_futures,
                            suggest_fang_stocks, suggest_crypto,
@@ -153,6 +154,8 @@ def get_contracts_of_type(ib, contract_type, limit=100):
 async def get_contracts_of_type_async(ib, contract_type, limit=100):
     if contract_type == 'options':
         contracts = await suggest_options_async(ib, limit=limit, stocks_limit=50)
+    elif contract_type == 'futures_options':
+        contracts = (await suggest_futures_options_async(ib))[:limit]
     elif contract_type == 'futures':
         contracts = suggest_futures(ib)[:limit]
     elif contract_type == 'ufutures':
