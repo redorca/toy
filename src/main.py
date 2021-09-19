@@ -200,6 +200,9 @@ async def get_contracts_of_type_async(ib, contract_type, limit=100):
     else:
         logger.info('Unexpected contract type', contract_type)
         sys.exit(1)
+    logger.debug("here are the contracts we filtered to...")
+    for contract in contracts:
+        logger.debug(contract)
     return contracts
 
 
@@ -267,7 +270,7 @@ async def run_trading_async(contract_type="options",
     ib = await connect_async(contract_type=contract_type, client_id=23)
     logger.info(f"connection takes {time.perf_counter()-start:0.3f} seconds")
     logger.warning("USING DELAYED MARKET DATA DURING TESTING")
-    ib.reqMarketDataType(3)
+    ib.reqMarketDataType(conf.MARKET_DATA_TYPE)
     while contract_type == 'options' \
             and not ignore_market_data \
             and not util.is_options_market_data_available(ib):
@@ -286,12 +289,13 @@ async def run_trading_async(contract_type="options",
     for ct in contract_type.split(','):
         contracts.extend(await get_contracts_of_type_async(ib, ct, limit=int(limit)))
 
-    logger.info(
-        f"retrieving contracts data took {time.perf_counter() - start:0.3f} seconds")
+    logger.info(f"TOTAL retrieving contracts data took"
+                f" {time.perf_counter() - start:0.3f} seconds")
     if ib.isConnected:
         ib.disconnect()
-    return "dave says done"
 
+    logger.warning("BAILING OUT BEFORE RUNNING THE Trader OBJECT")
+    return "Dave exits run_trading_async early"
     if backtest:
         trader = Trader(ib, conf.ACCOUNT, contracts,
                         bar_size='5 mins',

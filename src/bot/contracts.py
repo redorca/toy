@@ -76,7 +76,7 @@ def suggest_stocks(ib):
 
 async def suggest_stocks_async(ib):
     contracts = [
-        # ibs.Stock('AAPL', 'SMART', 'USD'),
+        ibs.Stock('AAPL', 'SMART', 'USD'),
         ibs.Stock('AMZN', 'SMART', 'USD'),
         ibs.Stock('FB', 'SMART', 'USD'),
         ibs.Stock('GOOGL', 'SMART', 'USD'),
@@ -86,29 +86,29 @@ async def suggest_stocks_async(ib):
         ibs.Stock('QLD', 'SMART', 'USD'), #
 
         # ibs.Stock('AVGO', 'SMART', 'USD'),
-        # ibs.Stock('BA', 'SMART', 'USD'),
+        ibs.Stock('BA', 'SMART', 'USD'),
         # ibs.Stock('BKNG', 'SMART', 'USD'),
-        # ibs.Stock('BYND', 'SMART', 'USD'),
+        ibs.Stock('BYND', 'SMART', 'USD'),
         ibs.Stock('CMG', 'SMART', 'USD'),
         ibs.Stock('DIS', 'SMART', 'USD'),
         # ibs.Stock('LRCX', 'SMART', 'USD'),
-        # ibs.Stock('MA', 'SMART', 'USD'),
-        # ibs.Stock('MELI', 'SMART', 'USD'),
-        # ibs.Stock('NFLX', 'SMART', 'USD'),
+        ibs.Stock('MA', 'SMART', 'USD'),
+        ibs.Stock('MELI', 'SMART', 'USD'),
+        ibs.Stock('NFLX', 'SMART', 'USD'),
         # ibs.Stock('NOW', 'SMART', 'USD'),
         # # ibs.Stock('NTES', 'SMART', 'USD'),
-        # ibs.Stock('NVDA', 'SMART', 'USD'),
+        ibs.Stock('NVDA', 'SMART', 'USD'),
         # # ibs.Stock('REGN', 'SMART', 'USD'),
-        # ibs.Stock('ROKU', 'SMART', 'USD'),
-        # ibs.Stock('SHOP', 'SMART', 'USD'),
+        ibs.Stock('ROKU', 'SMART', 'USD'),
+        ibs.Stock('SHOP', 'SMART', 'USD'),
         # ibs.Stock('STMP', 'SMART', 'USD'),
         # ibs.Stock('SPOT', 'SMART', 'USD'),
-        # ibs.Stock('TSLA', 'SMART', 'USD'),
+        ibs.Stock('TSLA', 'SMART', 'USD'),
         # ibs.Stock('TTD', 'SMART', 'USD'),
         # ibs.Stock('ZS', 'SMART', 'USD'),
         # ibs.Stock('AMD', 'SMART', 'USD'),
-        # ibs.Stock('NKLA', 'SMART', 'USD'),
-        # ibs.Stock('ZM', 'SMART', 'USD'),
+        ibs.Stock('NKLA', 'SMART', 'USD'),
+        ibs.Stock('ZM', 'SMART', 'USD'),
     ]
     # davs2rt does qualifyContractAsync work in parallel witt the list? think so
     # tasks = []
@@ -116,12 +116,13 @@ async def suggest_stocks_async(ib):
     #     tasks.append(ib.qualifyContractsAsync(c))
     # foo = await asyncio.gather(*tasks)
     # qcontracts = await ib.qualifyContractsAsync(*contracts)
+    logger.debug(f"using {len(contracts)} stocks")
     logger.debug(contracts)
     begin = time.perf_counter()
     contracts =  await ib.qualifyContractsAsync(*contracts)
     logger.info("qualifying contracts took {:.3f} seconds".format(
         time.perf_counter() - begin))  # 0.234 secs
-    logger.info(contracts)
+
 
     return contracts
 
@@ -248,9 +249,10 @@ def suggest_options(ib, limit=None, stocks_limit=None, limit_strike=4, no_filter
 async def suggest_options_async(ib, limit=None, stocks_limit=None, limit_strike=4,
         no_filter=False):
     logger.info("get stocks")
+    suggest_options_start = time.perf_counter()
     stocks = (await suggest_stocks_async(ib))[:stocks_limit]
 
-    logger.info('get tickers')
+    logger.info('get stock tickers')
     candidate_options = []
     md_dict = {}
     start = time.perf_counter()
@@ -259,16 +261,16 @@ async def suggest_options_async(ib, limit=None, stocks_limit=None, limit_strike=
 
     logger.info('get available options')
     loop_start = time.perf_counter()
-    strikes_tasks = set()
-    i = 0
-    for ticker in tickers:
-        logger.debug(f'get options for {ticker.contract.localSymbol}')
-        strikes_tasks.add(
+    async_tasks = []
+
+    for i, ticker in enumerate(tickers, start=1):
+        logger.debug(f'launching async get options for {ticker.contract.localSymbol}')
+        async_tasks.append(
             asyncio.create_task(get_expiry_and_strikes_async(ib, ticker))
         )
         await asyncio.sleep(0) # let's task get started
-        i += 1
-    results = await asyncio.gather(*strikes_tasks)
+
+    results = await asyncio.gather(*async_tasks)
     logger.debug(f"got option chains for {i} securities in "
                  f"{time.perf_counter()-loop_start:0.3f} secs")
     for stock, expiry, strikes in results:
@@ -276,110 +278,134 @@ async def suggest_options_async(ib, limit=None, stocks_limit=None, limit_strike=
         if not expiry:
             continue
 
-        new_candidate_tasks = set()
+        async_tasks = []
         start = time.perf_counter()
         for strike in strikes[limit_strike:]:
             for right in ['C', 'P']:
-                new_candidate_option = ibs.Option(
+                candidate_option = ibs.Option(
                     stock.symbol, expiry, strike, right, 'SMART')
-                new_candidate_tasks.add(asyncio.create_task(
-                    ib.qualifyContractsAsync(new_candidate_option)))
-                await asyncio.sleep(0) # give the new task a chance to run
-        new_candidate_options = await asyncio.gather(*new_candidate_tasks)
-        # note: this returns a list of lists of options,
+                async_tasks.append(asyncio.create_task(
+                    ib.qualifyContractsAsync(candidate_option)))
+                await asyncio.sleep(0) # lets the new task start
+        loop_candidate_options = await asyncio.gather(*async_tasks)
+        # returns a list of lists (why?), flatten to a list of options
+        loop_candidate_options = [item for inner_list in loop_candidate_options for
+                                  item in inner_list]
         # some lists are empty on strike prices that don't seem to exist
-        new_candidate_options = list(filter(lambda x: len(x)!=0, new_candidate_options))
-        new_candidate_options = list(map(lambda x: x[0], new_candidate_options))
+        candidate_options.extend(loop_candidate_options)
         logger.debug(f"{stock.symbol} ib.qualifyContractsAsync took"
               f" {time.perf_counter() - start}")  #0.358
-        option_data_tasks = set()
-        num_options = 0
-        start = time.perf_counter()
-        if not no_filter:
-            for option in new_candidate_options:
-                option_data_tasks.add(asyncio.create_task(
-                    get_option_market_data_async(ib, ticker, option))
-                )
-                await asyncio.sleep(0) # let task start
-                num_options += 1
-            # for option in new_candidate_options:
-            #     start = time.perf_counter()
-            #     md_opt = await get_option_market_data_async(ib, ticker, option)
-            #     logger.debug(f"get_option_market_data_async took {time.perf_counter()-start}")
-            #     logger.debug('->', option.strike, option.right, md_opt)
-            #     #get_option_market_data_async took 0.0006509020004159538
-            #     md_dict[option.conId] = md_opt
-        md_opts = await asyncio.gather(*option_data_tasks)
-
-        # BUG BUG need to merge option data values into candidate options
-        assert False, "this is where you got frustrated and gave up for the day"
-
-        option_data_dict = []
-        for option_data in md_opts:
-            option_data_dict[option_data['option']] = dict(
-                volume=option_data['volume'],
-                open_interest=option_data['open_interest']
-            )
-        logger.debug(f"gathered {num_options+1} option data records in"
-              f" {time.perf_counter()-start:0.3f} secs.")
-        candidate_options.extend(new_candidate_options)
-        candidate_options = option_data_dict
 
     logger.info(
         # took 123 seconds with wrapper.error.1014  Warning 10167
         # 2021-09-02 took 17 seconds after creating tasks for expiry and strikes
         f"looping all qualifyContractsAsync took "
         f"{time.perf_counter()-loop_start:0.3f}")
+
     if no_filter:
         return candidate_options[:limit]
 
+    async_tasks = []
     start = time.perf_counter()
-    candidate_tickers = await ib.reqTickersAsync(*option_data_dict.keys())
+    ticker = None # carries in from loop above, but unused in get_option_market_data_async
+    for i, option in enumerate(candidate_options, start=1):
+        async_tasks.append(asyncio.create_task(
+            get_option_market_data_async(ib, ticker, option)
+        ))
+        await asyncio.sleep(0)  # lets task start
+    md_opts = await asyncio.gather(*async_tasks)
+    # make vol open_interest dict keyed by conId
+    vol_dict = dict()
+    oi_dict = dict()
+    option_dict = dict()
+    for item in md_opts:
+        conId = item["option"].conId
+        vol_dict[conId] = item.get("volume", 0)
+        oi_dict[conId] = item.get("open_interest",0)
+        option_dict[conId] = item["option"]
+    logger.debug(f"gathered {i} option data records in"
+                 f" {time.perf_counter() - start:0.3f} secs."
+    )
+
+    start = time.perf_counter()
+    logger.debug(f"about to call reqTickersAsync with {len(candidate_options)}"
+                 f" candidate options, this takes a while")
+    candidate_tickers = await ib.reqTickersAsync(*candidate_options)
     # 2021-09-02 ib.reqTickersAsync took 17.015 can this go into the loop as a task
     logger.debug(f"ib.reqTickersAsync took {time.perf_counter() - start}") #6.5 sec
+    logger.debug("this might go faster if broken into smaller task chunks")
+
     filtered_candidates = []
-
-    for co, ticker in zip(candidate_options, candidate_tickers):
-        if not ticker or not ticker.modelGreeks:
-            print('no ticker or greeks for', co)
+    all_data = dict()
+    for ticker in candidate_tickers:
+        whats_missing = []
+        if not ticker:
+            whats_missing.append("ticker data")
+        if not ticker.modelGreeks:
+            whats_missing.append("greeks")
+        if bool(whats_missing):
+            s = ",".join(whats_missing)
+            logger.warning(f"dropping {ticker.contract.localSymbol}, "
+                           f"missing {s}"
+            )
             continue
-
+        conId = ticker.contract.conId
         delta = ticker.modelGreeks.delta
         # md_dict[co.conId]['delta'] = delta
-        v = md_dict[co.conId]['volume']
-        oi = md_dict[co.conId]['open_interest']
+        v = vol_dict.get(conId, None)
+        oi = oi_dict.get(conId, None)
+        co = option_dict.get(conId, None)
 
-        # if isnan(delta) or isnan(v) or isnan(oi):
-        #     logger.warning(f"missing data in {stock.symbol}, skipping")
-        #     continue
+        if delta is None or isnan(delta):
+            whats_missing.append('delta')
+        if v is None or isnan(v):
+            whats_missing.append('volume')
+        if oi is None or isnan(oi):
+            whats_missing.append('open_interest')
+        if bool(whats_missing):
+            s = ",".join(whats_missing)
+            logger.warning(f"dropping {ticker.contract.localSymbol}, "
+                           f"missing {s}")
+            continue
         try:
             if not (abs(delta) > conf.MIN_DELTA and abs(delta) < conf.MAX_DELTA):
                 continue
         except TypeError:  #delta can be a nan after hours
             continue
 
-        filtered_candidates.append(co)
+        all_data[conId] = dict()
+        all_data[conId]["open_interest"] = oi_dict[conId]
+        all_data[conId]["volume"] = vol_dict[conId]
+        all_data[conId]["option"] = option_dict[conId]
+        all_data[conId]["ticker"] = ticker
+        all_data[conId]["delta"] = delta
+        filtered_candidates.append(all_data[conId])
+
         logger.debug('candidate\t%s\t%s\t%s\t%s' % (co.localSymbol, v, oi, delta))
 
     candidate_options = filtered_candidates
     # candidate_options.sort(key=lambda x:abs(.5 - abs(md_dict[x.conId]['delta'])))
     # candidate_options = candidate_options[:limit * 4]
-    candidate_options.sort(key=lambda x: -md_dict[x.conId]['open_interest'])
+    candidate_options.sort(key=lambda x: x['open_interest'])
     candidate_options = candidate_options[:limit * 2]
-    candidate_options.sort(key=lambda x: -md_dict[x.conId]['volume'])
+    candidate_options.sort(key=lambda x: x['volume'])
     candidate_options = candidate_options[:limit]
 
     for co in candidate_options:
-        v = md_dict[co.conId]['volume']
-        oi = md_dict[co.conId]['open_interest']
-        delta = md_dict[co.conId]['delta']
-        logger.debug('selected\t%s\t%s\t%s\t%s' % (co.localSymbol, v, oi, delta))
+        conId = co['option'].conId
+        v = all_data[conId]['volume']
+        oi = all_data[conId]['open_interest']
+        delta = all_data[conId]['delta']
+        localSymbol = all_data[conId]['option'].localSymbol
+        logger.debug('selected\t%s\t%s\t%s\t%s' % (localSymbol, v, oi, delta))
 
     # import pdb ; pdb.set_trace()
-    logger.info('qualify')
-    candidate_options = [await ib.qualifyContractsAsync(o) for o in candidate_options]
+    logger.info('qualified options:')
+    candidate_options = await ib.qualifyContractsAsync(*candidate_options)
+    total_time = time.perf_counter() - suggest_options_start
     for co in candidate_options:
         logger.debug(co)
+    logger.debug(f"suggest_options_async took {total_time} secs.")
     return candidate_options
 
 

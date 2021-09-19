@@ -9,9 +9,10 @@ import main
 logging.basicConfig(level=logging.WARNING)
 logger = loggingx.logger(__file__, logging.DEBUG)
 
+
 result = asyncio.run(
     main.run_trading_async(
-        contract_type="futures_options",
+        contract_type=("options", "futures_options")[0],
         backtest=False,
         ignore_market_data=True,
         limit=None,
