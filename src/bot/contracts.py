@@ -401,6 +401,7 @@ async def suggest_options_async(ib, limit=None, stocks_limit=None, limit_strike=
 
     # import pdb ; pdb.set_trace()
     logger.info('qualified options:')
+    candidate_options = [x['option'] for x in candidate_options[:]]
     candidate_options = await ib.qualifyContractsAsync(*candidate_options)
     total_time = time.perf_counter() - suggest_options_start
     for co in candidate_options:
