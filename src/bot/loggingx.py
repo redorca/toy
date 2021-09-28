@@ -56,7 +56,7 @@ if __name__ == "__main__":
     from pathlib import Path
 
     script_name = Path(__file__).stem
-    logger = mylogger(script_name, logging.DEBUG,)
+    logger = logger(script_name, logging.DEBUG,)
 
     jhandler = filehandler(
         "/home/davs2rt/downloads/jsonformat.log",
