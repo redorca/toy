@@ -38,7 +38,6 @@ from docopt import docopt
 
 import csv
 import datetime
-import docopt
 import pathlib
 import pprint
 import math

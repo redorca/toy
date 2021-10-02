@@ -171,7 +171,7 @@ def suggest_all_options(ib):
 
 
 def suggest_options(ib, limit=None, stocks_limit=None, limit_strike=4, no_filter=False):
-    stocks = suggest_stocks_async(ib)[:stocks_limit]
+    stocks = await suggest_stocks_async(ib)[:stocks_limit]
     option_cls = ibs.Option
 
     options = []
