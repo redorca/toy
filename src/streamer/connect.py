@@ -1,12 +1,12 @@
 import logging
 import ib_insync as ibs
 
-from bot.crypto import CryptoConnection
+# from bot.crypto import CryptoConnection
 
 
 def connect(contract_type=None, client_id=11):
-    if contract_type == "crypto":
-        return CryptoConnection()
+    # if contract_type == "crypto":
+    #     return CryptoConnection()
 
     ib = ibs.IB()
     ib_gateway_port = 4002
@@ -39,8 +39,8 @@ localhost.update(
 
 
 async def connect_async(config: dict = btcjo, contract_type=None, client_id=11):
-    if contract_type == "crypto":
-        return CryptoConnection()
+    # if contract_type == "crypto":
+    #     return CryptoConnection()
 
     ib = ibs.IB()
     ib_gateway_port = config["ib_gateway_port"]
