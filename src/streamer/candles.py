@@ -1,39 +1,249 @@
 # std lib
 import asyncio
-from statistics import mean, median
+import datetime
+import statistics
 import sys
 import time
+from typing import Optional, Union
 
 # PyPI
 import time
 
-import ib_insync as ib
+import ib_insync
 
 # local
 
+# in case we use Ticker ticktypes:
+# 1 highest bid
+# 2 lowest offer
+# 4 last price traded
+# 5 last size
+# 6 daily high
+# 7 daily low
+# 8 volume for the day / 100
+# 9 previous day's close
+# 14 this day's open
+# 49 trading halted.
+# size(?) vals: -1=unknown, 0=not halted, 1=general halt, 2=volatility halt
 
-class CandleBuilder:
+
+class Candle:
+    def __init__(
+        self,
+        opening: float,
+        high: float,
+        low: float,
+        closing: float,
+        start: datetime.datetime,
+        end: datetime.datetime,
+        average: float,
+        median: float,
+        number_ticks: int,
+    ):
+        self.opening = opening
+        self.high = high
+        self.low = low
+        self.closing = closing
+        self.start = start
+        self.end = end
+        self.average = average
+        self.median = median
+        self.number_ticks = number_ticks
+
+    def __str__(self):
+        val = f"Candle:{self.start}:{self.opening}, {self.end}:{self.closing}"
+        return val
+
+
+class CandleBuilderBase:
     def __init__(self):
         self.high = -1
         self.low = sys.maxsize
-        self.max_ticks = 1000
+        # self.max_ticks = 1000
         self.volume = 0
-        self.start_time = time.monotonic_ns()
+        self.start_time = None
+        self.start_timestamp = None
+        self.end_time = None
         self.prices = list()
+        self.timestamps = list()
 
-    async def build(self, ticker: ib.Ticker):
-        stock = ticker.contract
-        symbol = stock.symbol
-        timestamp = ticker.time.timestamp()  # conversions, probably
-        last = ticker.last
-        self.prices.append(last)
+    def re_init(self):
+        self.high = -1
+        self.low = sys.maxsize
+        self.volume = 0
+        self.start_time = None
+        self.start_timestamp = None
+        self.end_time = None
         # https://stackoverflow.com/questions/29193127/is-it-faster-to-truncate-a-list-by-making-it-equal-to-a-slice-or-by-using-del
-        need_to_delete = len(self.prices) - 100
-        if need_to_delete > 0:
-            del self.prices[0:need_to_delete]
-        average = mean(self.prices)
-        median_ = median(self.prices)
-        problem = """
-        doesn't calling through on every nth cause problems with the return stack?
-        -or- maybe not.  Every 100th time you call build, something else happens...
-        """
+        del self.prices[:]
+        del self.timestamps[:]
+
+    def build(self, ticker: ib_insync.Ticker):
+        if self.start_time is None:  # cleared in re_init
+            self.start_time = ticker.time
+            self.start_timestamp = ticker.time.timestamp()
+        self.high = max((self.high, ticker.last))
+        self.low = min((self.low, ticker.last))
+        self.volume += ticker.lastSize
+        self.end_time = ticker.time
+        self.prices.append(ticker.last)  # most recent price
+        self.timestamps.append(ticker.time.timestamp())  # a float, not a datetime
+
+
+class CandleBuilderTimed(CandleBuilderBase):
+    """signature to change to take a list of Calculators to send Candle to"""
+
+    def __init__(self, seconds: Union[int, float] = 60):
+        super().__init__()
+        self.seconds = seconds
+
+    def build(self, ticker: ib_insync.Ticker):
+        # https://stackoverflow.com/questions/29193127/is-it-faster-to-truncate-a-list-by-making-it-equal-to-a-slice-or-by-using-del
+        timestamp = ticker.time.timestamp()
+        if timestamp - self.start_timestamp > self.seconds:  # may exceed seconds
+            # time to emit a candle
+            candle = Candle(
+                opening=self.prices[0],
+                high=max(self.prices),
+                low=min(self.prices),
+                closing=self.prices[-1],
+                start=self.start_time,
+                end=self.end_time,
+                average=statistics.mean(self.prices),
+                median=statistics.median(self.prices),
+                number_ticks=len(self.prices),
+            )
+            print(candle)
+            self.re_init()
+
+        # to keep timed candles from running late, we check time first and
+        # emit existing candle if incoming time is over limit
+        super().build(ticker)
+
+
+class CandleBuilderCounted(CandleBuilderBase):
+    def __init__(self, number: int = 100):
+        super().__init__()
+        self.number_of_ticks = number
+
+    async def build(self, ticker: ib_insync.Ticker):
+        super().build(ticker)
+
+        if len(self.prices) >= self.number_of_ticks:
+            # emit a candle
+            candle = Candle(
+                opening=self.prices[0],
+                high=max(self.prices),
+                low=min(self.prices),
+                closing=self.prices[-1],
+                start=self.start_time,
+                end=self.end_time,
+                average=statistics.mean(self.prices),
+                median=statistics.median(self.prices),
+                number_ticks=len(self.prices),
+            )
+            print(candle)
+            self.re_init()
+
+
+if __name__ == "__main__":
+    from ib_insync import Stock, Ticker, TickData
+    import datetime
+
+    t = ib_insync.Ticker(
+        contract=Stock(symbol="AAPL", exchange="SMART", currency="USD"),
+        time=datetime.datetime(
+            2021, 12, 17, 2, 55, 26, 675099, tzinfo=datetime.timezone.utc
+        ),
+        bid=-1.0,
+        bidSize=0.0,
+        ask=-1.0,
+        askSize=0.0,
+        last=172.12,
+        lastSize=1.0,
+        volume=1504361.0,
+        open=179.15,
+        high=181.14,
+        low=170.75,
+        close=179.3,
+        ticks=[
+            TickData(
+                time=datetime.datetime(
+                    2021, 12, 17, 2, 55, 26, 675099, tzinfo=datetime.timezone.utc
+                ),
+                tickType=1,
+                price=-1.0,
+                size=0.0,
+            ),
+            TickData(
+                time=datetime.datetime(
+                    2021, 12, 17, 2, 55, 26, 675099, tzinfo=datetime.timezone.utc
+                ),
+                tickType=2,
+                price=-1.0,
+                size=0.0,
+            ),
+            TickData(
+                time=datetime.datetime(
+                    2021, 12, 17, 2, 55, 26, 675099, tzinfo=datetime.timezone.utc
+                ),
+                tickType=4,
+                price=172.12,
+                size=1.0,
+            ),
+            TickData(
+                time=datetime.datetime(
+                    2021, 12, 17, 2, 55, 26, 675099, tzinfo=datetime.timezone.utc
+                ),
+                tickType=5,
+                price=172.12,
+                size=1.0,
+            ),
+            TickData(
+                time=datetime.datetime(
+                    2021, 12, 17, 2, 55, 26, 675099, tzinfo=datetime.timezone.utc
+                ),
+                tickType=8,
+                price=-1.0,
+                size=1504361.0,
+            ),
+            TickData(
+                time=datetime.datetime(
+                    2021, 12, 17, 2, 55, 26, 675099, tzinfo=datetime.timezone.utc
+                ),
+                tickType=6,
+                price=181.14,
+                size=0.0,
+            ),
+            TickData(
+                time=datetime.datetime(
+                    2021, 12, 17, 2, 55, 26, 675099, tzinfo=datetime.timezone.utc
+                ),
+                tickType=7,
+                price=170.75,
+                size=0.0,
+            ),
+            TickData(
+                time=datetime.datetime(
+                    2021, 12, 17, 2, 55, 26, 675099, tzinfo=datetime.timezone.utc
+                ),
+                tickType=9,
+                price=179.3,
+                size=0.0,
+            ),
+            TickData(
+                time=datetime.datetime(
+                    2021, 12, 17, 2, 55, 26, 675099, tzinfo=datetime.timezone.utc
+                ),
+                tickType=14,
+                price=179.15,
+                size=0.0,
+            ),
+        ],
+    )
+
+    cbc = CandleBuilderCounted(number=5)
+    cbt = CandleBuilderTimed(seconds=30)
+
+    for _ in range(10):
+        asyncio.run(cbc.build(t), debug=True)
