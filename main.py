@@ -1,16 +1,59 @@
-# This is a sample Python script.
+#  lets use this file to compose the network, and then set it running.
+#
+# also, need a way to replay ticks if we're going to test this at night.
+# Can read and process our saved file with a little work.
+# don't forget to add in logging real soon now.
+import asyncio
+import ib_insync
+from streamer import conf, connect, ticks, candles, emacalc
 
-# Press Shift+F10 to execute it or replace it with your code.
-# Press Double Shift to search everywhere for classes, files, tool windows, actions, and settings.
+
+async def run_a(
+    tick_src: ticks.Ticks,
+    candle_maker: candles.CandleMakerCounted,
+    ema_calculator: emacalc.EmaCalculator,
+):
+    while True:
+        tick = await tick_src.run_a()  # should keep emitting ticks
+        candle = await candle_maker.run_a(tick)  # will filter them down to candles
+        if candle is None:
+            continue
+        print(candle)
+        sys.exit(0)
+        ema = await ema_calculator.run_a(candle)  # incomplete
+        if ema is None:
+            continue
+        print(ema)
 
 
-def print_hi(name):
-    # Use a breakpoint in the code line below to debug your script.
-    print(f'Hi, {name}')  # Press Ctrl+F8 to toggle the breakpoint.
+async def main(connection_info: dict):
+    # this is where we compose the network (Arun's block diagram)
+    # first make objects
+
+    conn = connect.Connection()
+    conn.select(connection_info)
+    ib = await conn.connect_async()
+
+    task_set = set()
+    for symbol in ("AAPL", "TSLA"):  #
+        connection_info["symbol"] = symbol
+        # make the processing objects
+        tick_src = ticks.Ticks(ib, symbol)
+        candle_maker = candles.CandleMakerDollarVolume()
+        ema_calculator = emacalc.EmaCalculator()
+
+        task_set.add(
+            asyncio.create_task(
+                run_a(tick_src, candle_maker, ema_calculator), name=symbol
+            )
+        )
+
+    results = await asyncio.gather(*task_set)
+    return results
 
 
-# Press the green button in the gutter to run the script.
-if __name__ == '__main__':
-    print_hi('PyCharm')
+if __name__ == "__main__":
+    import sys
 
-# See PyCharm help at https://www.jetbrains.com/help/pycharm/
+    connection_info = connect.Connection.btcjo
+    asyncio.run(main(connection_info=connection_info), debug=False)

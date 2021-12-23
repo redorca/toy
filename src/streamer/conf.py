@@ -1,10 +1,10 @@
 # ACCOUNT = 'DU2326883'  # arden9050 #2
 # ACCOUNT = 'DU2856241'  # btcvc4842
-selector = 1
+selector = 2
 ACCOUNT = "DU1825086"  # btcadv966
 ACCOUNT = "DF3987931"  # btcjo7537
-HOST = ("127.0.0.1", "btcjopaper.rockyahoo.com")[selector]
-PORT = (7497, 4002)[selector]
+HOST = ("127.0.0.1", "btcjopaper.rockyahoo.com", "btchfpaper.rockyahoo.com")[selector]
+PORT = (7497, 4002, 4002)[selector]
 MIN_DELTA = 0.1
 MAX_DELTA = 0.7
 RANGES_NUM_DAYS = 14

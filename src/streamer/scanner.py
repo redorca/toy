@@ -1,4 +1,4 @@
-import connect
+import connectx
 
 from ib_insync import ScannerSubscription
 

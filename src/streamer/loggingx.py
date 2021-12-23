@@ -1,6 +1,6 @@
 "My favorite log formats all in one place"
 import pathlib
-import sys
+import logging
 import logging.handlers
 from textwrap import dedent
 
@@ -36,7 +36,7 @@ def filehandler(logfilename, level=logging.DEBUG, logformat=logformat):
 
 def _name(dunder_file) -> str:
     # converts __file__ to name of file
-    print(dunder_file)
+    # print(dunder_file)
     return pathlib.Path(dunder_file).name
 
 

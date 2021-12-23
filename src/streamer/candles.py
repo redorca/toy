@@ -51,11 +51,11 @@ class Candle:
         self.number_ticks = number_ticks
 
     def __str__(self):
-        val = f"Candle:{self.start}:{self.opening}, {self.end}:{self.closing}"
+        val = f"Candle:open:{self.opening}, high:{self.high}, low:{self.low}, close:{self.closing}, num_ticks:{self.number_ticks}"
         return val
 
 
-class CandleBuilderBase:
+class CandleMakerBase:
     def __init__(self):
         self.high = -1
         self.low = sys.maxsize
@@ -78,7 +78,10 @@ class CandleBuilderBase:
         del self.prices[:]
         del self.timestamps[:]
 
-    def build(self, ticker: ib_insync.Ticker):
+    def run_a(self, ticker: ib_insync.Ticker):
+        # TODO: need a check here. when market is closed, we continue to get ticks
+        # of the last trade, even though halted==0.0. could look for weird
+        # data: bid & ask=-1, bidSize&askSize=0, volume does not increase.
         if self.start_time is None:  # cleared in re_init
             self.start_time = ticker.time
             self.start_timestamp = ticker.time.timestamp()
@@ -90,14 +93,14 @@ class CandleBuilderBase:
         self.timestamps.append(ticker.time.timestamp())  # a float, not a datetime
 
 
-class CandleBuilderTimed(CandleBuilderBase):
+class CandleMakerTimed(CandleMakerBase):
     """signature to change to take a list of Calculators to send Candle to"""
 
     def __init__(self, seconds: Union[int, float] = 60):
         super().__init__()
         self.seconds = seconds
 
-    def build(self, ticker: ib_insync.Ticker):
+    def run_a(self, ticker: ib_insync.Ticker):
         # https://stackoverflow.com/questions/29193127/is-it-faster-to-truncate-a-list-by-making-it-equal-to-a-slice-or-by-using-del
         timestamp = ticker.time.timestamp()
         if timestamp - self.start_timestamp > self.seconds:  # may exceed seconds
@@ -113,21 +116,22 @@ class CandleBuilderTimed(CandleBuilderBase):
                 median=statistics.median(self.prices),
                 number_ticks=len(self.prices),
             )
-            print(candle)
             self.re_init()
+            return candle
 
         # to keep timed candles from running late, we check time first and
         # emit existing candle if incoming time is over limit
-        super().build(ticker)
+        super().run_a(ticker)
+        return None
 
 
-class CandleBuilderCounted(CandleBuilderBase):
+class CandleMakerCounted(CandleMakerBase):
     def __init__(self, number: int = 100):
         super().__init__()
         self.number_of_ticks = number
 
-    async def build(self, ticker: ib_insync.Ticker):
-        super().build(ticker)
+    async def run_a(self, ticker: ib_insync.Ticker):
+        super().run_a(ticker)
 
         if len(self.prices) >= self.number_of_ticks:
             # emit a candle
@@ -142,8 +146,43 @@ class CandleBuilderCounted(CandleBuilderBase):
                 median=statistics.median(self.prices),
                 number_ticks=len(self.prices),
             )
-            print(candle)
             self.re_init()
+            return candle
+        else:
+            return None
+
+
+class CandleMakerDollarVolume(CandleMakerBase):
+    def __init__(self, dollar_volume=1000000):
+        super().__init__()
+        # our candles contain >= max_dollar_volume
+        self.max_dollar_volume: int = dollar_volume
+        self.dollar_volume: float = 0.0
+
+    def re_init(self):
+        self.dollar_volume = 0
+        super().re_init()
+
+    async def run_a(self, ticker: ib_insync.Ticker):
+        super().run_a(ticker)
+        self.dollar_volume += float(ticker.last) * float(ticker.lastSize)
+        if self.dollar_volume >= self.max_dollar_volume:
+            # emit a candle
+            candle = Candle(
+                opening=self.prices[0],
+                high=max(self.prices),
+                low=min(self.prices),
+                closing=self.prices[-1],
+                start=self.start_time,
+                end=self.end_time,
+                average=statistics.mean(self.prices),
+                median=statistics.median(self.prices),
+                number_ticks=len(self.prices),
+            )
+            self.re_init()
+            return candle
+        else:
+            return None
 
 
 if __name__ == "__main__":
@@ -242,8 +281,8 @@ if __name__ == "__main__":
         ],
     )
 
-    cbc = CandleBuilderCounted(number=5)
-    cbt = CandleBuilderTimed(seconds=30)
+    cbc = CandleMakerCounted(number=5)
+    cbt = CandleMakerTimed(seconds=30)
 
     for _ in range(10):
-        asyncio.run(cbc.build(t), debug=True)
+        asyncio.run(cbc.run_a(t), debug=True)

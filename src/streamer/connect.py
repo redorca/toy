@@ -2,59 +2,52 @@ import logging
 import ib_insync as ibs
 
 # from bot.crypto import CryptoConnection
+class Connection:
+    """just a way to manage connection defaults"""
 
+    tws = {  # local traders workstation connection
+        "host": "127.0.0.1",
+        "port": 7496,
+    }
+    gw_defaults = {
+        "ib_gateway_port_live": 4001,
+        "ib_gateway_port": 4002,
+        "port": 4002,
+        "timeout": 10.0,
+    }
+    btcjo = gw_defaults.copy()
+    btcjo.update({"host": "btcjopaper.rockyahoo.com"})
 
-def connect(contract_type=None, client_id=11):
-    # if contract_type == "crypto":
-    #     return CryptoConnection()
+    btchf = gw_defaults.copy()
+    btchf.update({"host": "btchfpaper.rockyahoo.com"})
 
-    ib = ibs.IB()
-    ib_gateway_port = 4002
-    ib_gateway_port_live = 4001
-    trader_workstation_port = 7496
-    # ib.connect('127.0.0.1', ib_gateway_port_live, clientId=client_id)  # IB Gateway
-    # ib.connect('127.0.0.1', ib_gateway_port, clientId=client_id)  # IB Gateway
-    # logger=logging.getLogger().setLevel(logging.DEBUG)
-    ib.connect(
-        "127.0.0.1", trader_workstation_port, clientId=client_id, timeout=20
-    )  # Trader Workstation
-    return ib
+    client_id = 10
 
+    def __init__(self):
+        self.connection_dict = None
+        self.ib = ibs.IB()
 
-connection_defaults = {
-    "ib_gateway_port_live": 4001,
-    "ib_gateway_port": 4002,
-    "trader_workstation_port": 7496,
-}
+    def select(self, connection: dict):
+        """use one of the class dictionaries: tws, btcjo or btchf"""
+        self.connection_dict = connection
 
-btcjo = connection_defaults.copy()
-btcjo.update(
-    {"host": "btcjo.rockyahoo.com", "port": connection_defaults["ib_gateway_port"]}
-)
+    def connect(self, client_id=11):
 
-localhost = connection_defaults.copy()
-localhost.update(
-    {"host": "127.0.0.1", "port": connection_defaults["trader_workstation_port"]}
-)
+        self.ib.connect(
+            host=self.connection_dict["host"],
+            port=int(self.connection_dict["port"]),
+            clientId=Connection.client_id,
+            timeout=float(self.connection_dict["timeout"]),
+        )
+        Connection.client_id += 1
+        return self.ib
 
-
-async def connect_async(config: dict = btcjo, contract_type=None, client_id=11):
-    # if contract_type == "crypto":
-    #     return CryptoConnection()
-
-    ib = ibs.IB()
-    ib_gateway_port = config["ib_gateway_port"]
-    ib_gateway_port_live = config["ib_gateway_port_live"]
-    trader_workstation_port = config["trader_workstation_port"]
-    port = config["port"]
-    # ib.connect('127.0.0.1', ib_gateway_port_live, clientId=client_id)  # IB Gateway
-    # ib.connect('127.0.0.1', ib_gateway_port, clientId=client_id)  # IB Gateway
-    # logger=logging.getLogger().setLevel(logging.DEBUG)
-    print(f"connecting to {config['host']}")
-    await ib.connectAsync(
-        config["host"],
-        port,  # was traders workstation port
-        clientId=client_id,
-        timeout=20,
-    )  # Trader Workstation
-    return ib
+    async def connect_async(self):
+        await self.ib.connectAsync(
+            host=self.connection_dict["host"],
+            port=int(self.connection_dict["port"]),
+            clientId=Connection.client_id,
+            timeout=float(self.connection_dict["timeout"]),
+        )
+        Connection.client_id += 1
+        return self.ib
