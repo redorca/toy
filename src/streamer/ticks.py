@@ -21,8 +21,12 @@ class Ticks:
         self.ib.reqMktData(contract)
         async for tickers in self.ib.pendingTickersEvent:
             for ticker in tickers:
-                # here's where we feed tickers to CandleBuilder(symbol)
-                print(ticker)
+                # this is more likely to miss than double:
+                # print(f"{self.symbol}:{ticker.contract.symbol}", end= " :: ")
+                if self.symbol != ticker.contract.symbol:
+                    continue
+                # print(f"{self.symbol}:{ticker.contract.symbol}")
+
                 return ticker
 
     def stop(self):

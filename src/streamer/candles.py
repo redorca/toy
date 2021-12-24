@@ -30,6 +30,7 @@ import ib_insync
 class Candle:
     def __init__(
         self,
+        symbol: str,
         opening: float,
         high: float,
         low: float,
@@ -40,6 +41,7 @@ class Candle:
         median: float,
         number_ticks: int,
     ):
+        self.symbol = symbol
         self.opening = opening
         self.high = high
         self.low = low
@@ -51,7 +53,7 @@ class Candle:
         self.number_ticks = number_ticks
 
     def __str__(self):
-        val = f"Candle:open:{self.opening}, high:{self.high}, low:{self.low}, close:{self.closing}, num_ticks:{self.number_ticks}"
+        val = f"Candle {self.symbol}: open:{self.opening}, high:{self.high}, low:{self.low}, close:{self.closing}, num_ticks:{self.number_ticks}"
         return val
 
 
@@ -66,6 +68,7 @@ class CandleMakerBase:
         self.end_time = None
         self.prices = list()
         self.timestamps = list()
+        self.symbol: Optional[str] = None
 
     def re_init(self):
         self.high = -1
@@ -85,6 +88,8 @@ class CandleMakerBase:
         if self.start_time is None:  # cleared in re_init
             self.start_time = ticker.time
             self.start_timestamp = ticker.time.timestamp()
+            if self.symbol is None:
+                self.symbol = ticker.contract.symbol
         self.high = max((self.high, ticker.last))
         self.low = min((self.low, ticker.last))
         self.volume += ticker.lastSize
@@ -106,6 +111,7 @@ class CandleMakerTimed(CandleMakerBase):
         if timestamp - self.start_timestamp > self.seconds:  # may exceed seconds
             # time to emit a candle
             candle = Candle(
+                symbol=ticker.contract.symbol,
                 opening=self.prices[0],
                 high=max(self.prices),
                 low=min(self.prices),
@@ -136,6 +142,7 @@ class CandleMakerCounted(CandleMakerBase):
         if len(self.prices) >= self.number_of_ticks:
             # emit a candle
             candle = Candle(
+                symbol=ticker.contract.symbol,
                 opening=self.prices[0],
                 high=max(self.prices),
                 low=min(self.prices),
@@ -169,6 +176,7 @@ class CandleMakerDollarVolume(CandleMakerBase):
         if self.dollar_volume >= self.max_dollar_volume:
             # emit a candle
             candle = Candle(
+                symbol=ticker.contract.symbol,
                 opening=self.prices[0],
                 high=max(self.prices),
                 low=min(self.prices),

@@ -1,6 +1,6 @@
 import sys
 
-sys.path.append("/home/davs2rt/jobs/transcendAI/code/streamer/src")
+sys.path.append("//src")
 import asyncio
 import pytest
 import streamer
