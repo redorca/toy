@@ -24,28 +24,11 @@ async def run_a(
             continue
         # print(ema)
 
-comment_2021_12_23 = """
-this version of main and run_a don't work well.  It is built with the expectation
-that each tick_src only sees the ticker symbols it registers for.  This would have
-been convenient, in that ticks would be one stock, and could feed one candlemaker.
-But, when we instantiate two tick_src's, each get the sum of the subscriptions. 
-Current implementation filters out incoming that don't match this objects subscription,
-but that means that multiple tick src's will be mostly filtering out redundant data.
-BUT, if we have one tick src, we can't separate the streams until the ticks come
-in, and that makes it {hard|difficult to understand how to} have separate tasks per
-data flow on a single stock.  I was counting on each object in the flow to have to
-maintain state (candle, ema, etc) for 1 data flow, that is one stock.
-
-Anyway, this needs a refactoring to work better. 
-
-Current thought is a single tick src with all symbols, then read the symbol and
-use a case statement to feed to another task which is just the single stock flow.
-This would mean main would need to figure out how to transmit ticks to long lived tasks.
-This implies queues, which I'm trying to avoid.
-
-Alternate implementation would be for tick src to have a list of places to forward 
-different stock ticks to.  This embeds the network into the objects, which I was trying
-to avoid.  
+comment_2021_12_29 = """
+I've thought about this some, and decided to accept the inefficiency of filtering 
+ticks for all subscriptions, since it makes the long lived tasks simpler and avoids
+queues and other heavy items that might be even worse.  Will continue forward with this
+for now...
 """
 async def main(connection_info: dict):
     # this is where we compose the network (Arun's block diagram)
