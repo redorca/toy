@@ -24,12 +24,15 @@ async def run_a(
             continue
         # print(ema)
 
+
 comment_2021_12_29 = """
 I've thought about this some, and decided to accept the inefficiency of filtering 
 ticks for all subscriptions, since it makes the long lived tasks simpler and avoids
 queues and other heavy items that might be even worse.  Will continue forward with this
 for now...
 """
+
+
 async def main(connection_info: dict):
     # this is where we compose the network (Arun's block diagram)
     # first make objects
