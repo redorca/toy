@@ -1,4 +1,0 @@
-pip install venv
-python -m venv <directory name, typically venv>  #installs python
-pip --help  # for help
-pip install [options] -r <requirements file> [package-index-options]
