@@ -1,0 +1,8 @@
+
+2021-12-31 davs2rt
+
+At Arun's urging, I'm merging the beginnings of streamer into the toy repo. 
+This is the beginning of a multistep process where I'll patch up the 
+configuration to run with the poetry and docker structure that Tanvir
+set up. 
+
