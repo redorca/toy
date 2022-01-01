@@ -2,6 +2,7 @@
 archive/
 .DS_Store
 .idea/
+secrets.txt
 
 ### VirtualEnv template
 # Virtualenv
