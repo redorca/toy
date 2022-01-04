@@ -31,6 +31,15 @@ ticks for all subscriptions, since it makes the long lived tasks simpler and avo
 queues and other heavy items that might be even worse.  Will continue forward with this
 for now...
 """
+comment_2022_01_03 = """
+Here at the waffle house, thinking it might be better to compose the network as the 
+main objects are instantiated.  That is Ticker( [list of next objects that should
+receive ticks])  
+In the case of ticks, which would be per stock, this may be a little tricky. 
+Need to map each stock to a particular next object.  Currently assuming all subsequent
+processing objects are one security only, but not sure that's a good assumption.
+e.g. how to 3 different calculators come together on the next decision maker?
+"""
 
 
 async def main(connection_info: dict):
