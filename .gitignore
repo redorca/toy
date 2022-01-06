@@ -4,6 +4,13 @@ archive/
 .idea/
 secrets.txt
 
+diskcache/
+log/
+
+build/!/secrets.txt
+/venvx/
+
+
 ### VirtualEnv template
 # Virtualenv
 # http://iamzed.com/2009/05/07/a-primer-on-virtualenv/
@@ -228,8 +235,3 @@ fabric.properties
 
 # Android studio 3.1+ serialized cache file
 .idea/caches/build_file_checksums.ser
-
-diskcache/
-log/
-
-build/!/secrets.txt

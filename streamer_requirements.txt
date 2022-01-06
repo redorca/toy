@@ -1,4 +1,4 @@
-:black>=21.10b0
+black>=21.10b0
 click>=8.0.3
 eventkit>=0.8.9
 ib-insync>=0.9.69

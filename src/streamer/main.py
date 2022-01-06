@@ -7,45 +7,21 @@ import asyncio
 import ib_insync
 from streamer import conf, connect, ticks, candles, emacalc
 
-
-async def run_a(
-    tick_src: ticks.Ticks,
-    candle_maker: candles.CandleMakerBase,
-    ema_calculator: emacalc.EmaCalculator,
-):
-    while True:
-        tick = await tick_src.run_a()  # should keep emitting ticks
-        candle = await candle_maker.run_a(tick)  # will filter them down to candles
-        if candle is None:
-            continue
-        print(candle)
-        ema = await ema_calculator.run_a(candle)  # incomplete
-        if ema is None:
-            continue
-        # print(ema)
-
-
 comment_2021_12_29 = """
 I've thought about this some, and decided to accept the inefficiency of filtering 
 ticks for all subscriptions, since it makes the long lived tasks simpler and avoids
 queues and other heavy items that might be even worse.  Will continue forward with this
 for now...
 """
-comment_2022_01_03 = """
-Here at the waffle house, thinking it might be better to compose the network as the 
-main objects are instantiated.  That is Ticker( [list of next objects that should
-receive ticks])  
-In the case of ticks, which would be per stock, this may be a little tricky. 
-Need to map each stock to a particular next object.  Currently assuming all subsequent
-processing objects are one security only, but not sure that's a good assumption.
-e.g. how to 3 different calculators come together on the next decision maker?
+comment_2022_01_05 = """
+decided I was right(er) at the beginning.  Will instantiate streaming objects
+then explicitly describe network on a per security basis.
 """
 
 
-async def main(connection_info: dict):
+async def create(connection_info: dict):
     # this is where we compose the network (Arun's block diagram)
     # first make objects
-
     conn = connect.Connection()
     conn.select(connection_info)
     ib = await conn.connect_async()
@@ -60,7 +36,7 @@ async def main(connection_info: dict):
 
         task_set.add(
             asyncio.create_task(
-                run_a(tick_src, candle_maker, ema_calculator), name=symbol
+                compose(tick_src, candle_maker, ema_calculator), name=symbol
             )
         )
     # print('in main')
@@ -68,8 +44,26 @@ async def main(connection_info: dict):
     return results
 
 
+async def compose(
+    tick_src: ticks.Ticks,
+    candle_maker: candles.CandleMakerBase,
+    ema_calculator: emacalc.EmaCalculator,
+):
+    while True:
+        tick = await tick_src.run_a()  # should keep emitting ticks
+        print(tick)
+        candle = await candle_maker.run_a(tick)  # will filter them down to candles
+        if candle is None:
+            continue
+        print(candle)
+        ema = await ema_calculator.run_a(candle)  # incomplete
+        if ema is None:
+            continue
+        # print(ema)
+
+
 if __name__ == "__main__":
     import sys
 
     connection_info = connect.Connection.btcjo
-    asyncio.run(main(connection_info=connection_info), debug=False)
+    asyncio.run(create(connection_info=connection_info), debug=False)

@@ -6,7 +6,7 @@ authors = ["Tanvir Mudhar, Dave Stewart"]
 license = "PRI"
 
 [tool.poetry.dependencies]
-python = "3.9"
+python = "^3.9"
 attrs = "^21.2.0"
 banpei = "^0.1.2"
 certifi = "^2021.5.30"
@@ -30,6 +30,7 @@ pyculiarity = "^0.0.7"
 colorama = "^0.4.4"
 
 [tool.poetry.dev-dependencies]
+black = "^21.12b0"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
