@@ -21,7 +21,7 @@ class Connection:
     btchf = gw_defaults.copy()
     btchf.update({"host": "btchfpaper.rockyahoo.com"})
 
-    client_id = 10
+    client_id = 50
 
     def __init__(self):
         self.connection_dict = None
@@ -31,23 +31,26 @@ class Connection:
         """use one of the class dictionaries: tws, btcjo or btchf"""
         self.connection_dict = connection
 
-    def connect(self, client_id=11):
-
+    def connect(self, client_id=None):
+        if client_id is None:
+            client_id = Connection.client_id
+            Connection.client_id += 1
         self.ib.connect(
             host=self.connection_dict["host"],
             port=int(self.connection_dict["port"]),
-            clientId=Connection.client_id,
+            clientId=client_id,
             timeout=float(self.connection_dict["timeout"]),
         )
-        Connection.client_id += 1
         return self.ib
 
-    async def connect_async(self):
+    async def connect_async(self, client_id=None):
+        if client_id is None:
+            client_id = Connection.client_id
+            Connection.client_id += 1
         await self.ib.connectAsync(
             host=self.connection_dict["host"],
             port=int(self.connection_dict["port"]),
             clientId=Connection.client_id,
             timeout=float(self.connection_dict["timeout"]),
         )
-        Connection.client_id += 1
         return self.ib

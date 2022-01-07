@@ -24,36 +24,45 @@ class Ticks:
         self.ib = ib_conn
         self.symbol = symbol
         self.queued_tickers = list()
+        self.latest_volume = -1
 
     async def run_a(self):
         contract = ibi.Stock(self.symbol, "SMART", "USD")
         self.ib.reqMktData(contract)
         async for tickers in self.ib.pendingTickersEvent:
             for ticker in tickers:
-                # each Ticks object will see all subscriptions
-                if self.symbol != ticker.contract.symbol:
-                    continue
-                # after market close, we get -$1 ticks of size 0.0
-                if (
-                    ticker.bidSize < 0.0001  # don't use == with floats
+                if (  # checking for a redundant tick:
+                    # each Ticks object will see all subscriptions
+                    self.symbol != ticker.contract.symbol
+                    or self.latest_volume == ticker.volume
+                    # after market close, we get -$1 ticks of size 0.0
+                    or ticker.bidSize < 1.1  # don't use == with floats
                     or ticker.bid < 0.0
                     or ticker.ask < 0.0
-                ):
-                    continue
-                # store qualified tickers in a queue
-                self.queued_tickers.append(ticker)
-                logger.debug(
-                    f"{self.symbol}:{self.queued_tickers[-1].contract.symbol}:"
-                    f"{self.queued_tickers[-1].bidSize} "
-                    f"queue len={len(self.queued_tickers)}"
-                )
-
-            if len(self.queued_tickers) > 0:
-                ticker = self.queued_tickers.pop(0)
-                # logger.debug(f"{self.symbol}:{ticker.contract.symbol}:{ticker.bidSize}")
-                # only return 1 tick, but this logic will get exercised with every
-                # (wrong) incoming tick, too.
-                return ticker
+                    or isclose(ticker.halted, 0.0, abs_tol=0.1)
+                ):  # redundant or bad ticker, ignore.
+                    if len(self.queued_tickers) == 0:
+                        continue
+                    else:  # use redundant ticker as opportunity to reduce queue
+                        ticker = self.queued_tickers.pop(0)
+                        logger.debug(
+                            f"{self.symbol}"
+                            f":{ticker.last}"
+                            f":{ticker.volume}"
+                            f":{ticker.lastSize}"
+                            f"  dequeued len={len(self.queued_tickers)}"
+                        )
+                        return ticker
+                else:  # store qualified tickers in a queue
+                    self.latest_volume = ticker.volume
+                    self.queued_tickers.append(ticker)
+                    logger.debug(
+                        f"{self.symbol}"
+                        f":{self.queued_tickers[-1].last}"
+                        f":{self.queued_tickers[-1].volume}"
+                        f":{self.queued_tickers[-1].lastSize}"
+                        f"  enqueued len={len(self.queued_tickers)}"
+                    )
 
     def stop(self):
         self.ib.disconnect()

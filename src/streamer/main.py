@@ -19,15 +19,12 @@ then explicitly describe network on a per security basis.
 """
 
 
-async def create(connection_info: dict):
-    # this is where we compose the network (Arun's block diagram)
+async def create(ib):
+    # this is where we add processing block (Arun's block diagram)
     # first make objects
-    conn = connect.Connection()
-    conn.select(connection_info)
-    ib = await conn.connect_async()
 
     task_set = set()
-    for symbol in ("AAPL", "TSLA"):  #
+    for symbol in ("TSLA",):  # "AAPL",
         # connection_info["symbol"] = symbol
         # make the processing objects
         tick_src = ticks.Ticks(ib, symbol)
@@ -49,6 +46,7 @@ async def compose(
     candle_maker: candles.CandleMakerBase,
     ema_calculator: emacalc.EmaCalculator,
 ):
+    """this connects the blocks from create"""
     while True:
         tick = await tick_src.run_a()  # should keep emitting ticks
         print(tick)
@@ -65,5 +63,7 @@ async def compose(
 if __name__ == "__main__":
     import sys
 
-    connection_info = connect.Connection.btcjo
-    asyncio.run(create(connection_info=connection_info), debug=False)
+    connection = connect.Connection()
+    connection.select(connect.Connection.btcjo)
+    ib = connection.connect()
+    asyncio.run(create(ib), debug=False)
