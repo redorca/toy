@@ -1,3 +1,4 @@
+import datetime
 import sys
 
 sys.path.append("//src")
@@ -12,19 +13,33 @@ for item in sys.path:
     print(item)
 
 
-def test_defaults():
+def test_gateway():
+    gateway = connect.Btcjopaper()
+
+    assert isinstance(gateway, connect.Gateway)
+    assert gateway.host is not None
+    assert isinstance(gateway.port, int)
+    assert isinstance(gateway.timeout, float)
+
+
+def test_connection_object():
+
     conn = connect.Connection()
-    assert isinstance(conn.tws, dict)
-    assert isinstance(conn.gw_defaults, dict)
-    assert isinstance(conn.btcjo, dict)
-    assert conn.tws["port"] == 7496
+    assert isinstance(conn, connect.Connection)
+    assert isinstance(conn.gateway, connect.Gateway)
+    assert isinstance(conn.gateway, connect.TradersWorkstation)
 
 
-@pytest.mark.filterwarnings("ignore:DeprecationWarning")
+# @pytest.mark.filterwarnings("ignore:DeprecationWarning")
 def test_connection():
-    conn = connect.Connection()
-    conn.select(connect.Connection.btcjo)
+    gateway = connect.Btcjopaper()
+    conn = connect.Connection(gateway)
     try:
         ib = conn.connect()
-    except:
-        assert False, "failed to connect"
+        assert isinstance(ib.reqCurrentTime(), datetime.datetime)
+    except AssertionError as e:
+        raise e
+    except Exception as e:
+        assert False, e
+    finally:
+        conn.close()

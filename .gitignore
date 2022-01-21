@@ -3,6 +3,7 @@ archive/
 .DS_Store
 .idea/
 secrets.txt
+**/secrets.py
 
 diskcache/
 log/
