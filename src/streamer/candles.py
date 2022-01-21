@@ -3,11 +3,10 @@ import asyncio
 import datetime
 import statistics
 import sys
-import time
 from typing import Optional, Union
 
 # PyPI
-import time
+
 
 import ib_insync
 
@@ -53,7 +52,11 @@ class Candle:
         self.number_ticks = number_ticks
 
     def __str__(self):
-        val = f"Candle {self.symbol}: open:{self.opening}, high:{self.high}, low:{self.low}, close:{self.closing}, num_ticks:{self.number_ticks}"
+        val = (
+            f"Candle {self.symbol}: open:{self.opening}"
+            f", high:{self.high}, low:{self.low}"
+            f", close:{self.closing}, num_ticks:{self.number_ticks}"
+        )
         return val
 
 

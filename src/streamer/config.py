@@ -1,6 +1,6 @@
 # ACCOUNT = 'DU2326883'  # arden9050 #2
 # ACCOUNT = 'DU2856241'  # btcvc4842
-selector = 2
+selector = 1
 ACCOUNT = "DU1825086"  # btcadv966
 ACCOUNT = "DF3987931"  # btcjo7537
 HOST = ("127.0.0.1", "btcjopaper.rockyahoo.com", "btchfpaper.rockyahoo.com")[selector]

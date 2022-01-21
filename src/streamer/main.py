@@ -1,11 +1,13 @@
-#  lets use this file to compose the network, and then set it running.
+#  let's use this file to compose the network, and then set it running.
 #
 # also, need a way to replay ticks if we're going to test this at night.
 # Can read and process our saved file with a little work.
 # don't forget to add in logging real soon now.
 import asyncio
-import ib_insync
-from streamer import conf, connect, ticks, candles, emacalc
+import uvloop
+
+asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
+from streamer import connect, ticks, candles, emacalc
 
 comment_2021_12_29 = """
 I've thought about this some, and decided to accept the inefficiency of filtering 
@@ -61,8 +63,6 @@ async def compose(
 
 
 if __name__ == "__main__":
-    import sys
-
     connection = connect.Connection()
     connection.select(connect.Connection.btcjo)
     ib = connection.connect()

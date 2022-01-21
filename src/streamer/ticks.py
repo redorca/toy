@@ -10,7 +10,7 @@ import davelogging as dl
 import ib_insync as ibi
 
 # local
-from streamer import conf
+from streamer import config, connect
 
 # print(f"__file__ is {__file__}")  # file: /whole/path/to/davelogging.py
 # print(f"__name__ is {__name__}")  # package name: streamer.davelogging
@@ -71,12 +71,15 @@ class Ticks:
 if __name__ == "__main__":
 
     connection_info = {
-        "host": conf.HOST,
-        "port": conf.PORT,
-        "account": conf.ACCOUNT,
+        "host": config.HOST,
+        "port": config.PORT,
+        "account": config.ACCOUNT,
         "timeout": 5,
     }
-    app = Ticks(**connection_info)
+    ib_conn = connect.Connection()
+    ib_conn.select(ib_conn.btcjo)
+    ib = ib_conn.connect()
+    app = Ticks(ib, "IBM")
 
     try:
         asyncio.run(app.run_a())
