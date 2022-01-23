@@ -1,13 +1,16 @@
 # standard library
 import logging
 import os
-from typing import Optional
+from typing import Optional, Union
 
 # PyPi
-import ib_insync as ibs
+import ib_insync as ibi
 
 # local modules
 from streamer import config
+from streamer import davelogging as dl
+
+logger = dl.logger(__name__, dl.DEBUG, dl.logformat)
 
 
 class Gateway:
@@ -20,25 +23,27 @@ class Gateway:
     account: str = None
     timeout: float = 10.0
 
-    def env_overrides(self):
-        acct = os.getenv("TB_ACCOUNT")  # getenv returns None if not set
-        if acct is not None:
-            print(f"using account '{acct}' from environment variable TB_ACCOUNT")
-            self.account = acct
-        host = os.getenv("TB_HOST")
-        if host is not None:
-            print(f"connecting to '{host}' from environment variable TB_HOST")
-            self.host = host
-        port = os.getenv("TB_PORT")
-        if port is not None:
-            port = int(port)
-            print(f"using port {port} from environment variable TB_PORT")
-            self.port = port
+    def __init__(self):
+        self.environment_overrider()
+
+    def environment_overrider(self):
+        acct_ = os.getenv("TB_ACCOUNT")  # getenv returns None if not set
+        if acct_ is not None:
+            print(f"using account '{acct_}' from environment variable TB_ACCOUNT")
+            self.account = acct_
+        host_ = os.getenv("TB_HOST")
+        if host_ is not None:
+            print(f"connecting to '{host_}' from environment variable TB_HOST")
+            self.host = host_
+        port_ = os.getenv("TB_PORT")
+        if port_ is not None:
+            port_ = int(port_)
+            print(f"using port {port_} from environment variable TB_PORT")
+            self.port = port_
         timeout = os.getenv("TB_TIMEOUT")
 
-    def change_timeout(self, timeout: Optional[float] = None):
-        if timeout is not None:
-            self.timeout = float(timeout)
+    def change_timeout(self, timeout: Union[int, float]):
+        self.timeout = float(timeout)
 
 
 class TradersWorkstation(Gateway):
@@ -46,36 +51,26 @@ class TradersWorkstation(Gateway):
     port = 7497
     timeout = 5.0
 
-    def __init__(self):
-        self.env_overrides()
-
 
 class Btcjopaper(Gateway):
-    host = config.gateway_hosts["btcjopaper"]
-
-    def __init__(self):
-        self.env_overrides()
+    host = config.gateway_hosts.get("btcjopaper", "btcjopaper.rockyahoo.com")
+    account = "DF3987931"
 
 
 class Btchfpaper(Gateway):
-    host = config.gateway_hosts["btchfpaper"]
-
-    def __init__(self):
-        self.env_overrides()
+    host = config.gateway_hosts.get("btchfpaper", "btchfpaper.rockyahoo.com")
 
 
 class Nypaperib(Gateway):
-    host = config.gateway_hosts["nypaperib"]
-
-    def __init__(self):
-        self.env_overrides()
+    host = config.gateway_hosts.get("nypaperib", "nypaperib.rockyahoo.com")
 
 
 class Chpaperib(Gateway):
-    host = config.gateway_hosts["chpaperib"]
+    host = config.gateway_hosts.get("chpaperib", "chpaperib.rockyahoo.com")
 
-    def __init__(self):
-        self.env_overrides()
+
+class GatewayFromEnvironment(Gateway):
+    pass
 
 
 class Connection:
@@ -87,14 +82,14 @@ class Connection:
     Use secrets_template.py as your guide to making your own.
     """
 
-    client_id = 50
+    client_id = 10
 
     def __init__(self, gateway: Optional[Gateway] = None):
         if gateway is None:
             self.gateway = TradersWorkstation()
         else:
             self.gateway = gateway
-        self.ib = ibs.IB()
+        self.ib = ibi.IB()
 
     def connect(self, client_id: Optional[int] = None):
         if client_id is None:
@@ -105,17 +100,15 @@ class Connection:
             port=int(self.gateway.port),
             clientId=self.client_id,
             timeout=float(self.gateway.timeout),
+            account=self.gateway.account,
         )
-        # log unsuccessful connect
+        # if self.ib.isConnected():
+        #     logger.info(f"successful connection to {self.gateway.host}")
         return self.ib
-
-    def close(self):
-        if ib.isConnected():
-            self.ib.disconnect()
 
     async def connect_async(self, client_id=None):
         if client_id is None:
-            client_id = Connection.client_id
+            self.client_id = Connection.client_id
             Connection.client_id += 1
         await self.ib.connectAsync(
             host=self.gateway.host,
@@ -124,6 +117,10 @@ class Connection:
             timeout=float(self.gateway.timeout),
         )
         return self.ib
+
+    def close(self):
+        if ib.isConnected():
+            self.ib.disconnect()
 
 
 if __name__ == "__main__":

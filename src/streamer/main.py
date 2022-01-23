@@ -8,21 +8,17 @@
 import asyncio
 
 # PyPI
-import uvloop
+# import uvloop
 
 # local modules
-# from streamer import connect, ticks, candles, emacalc
+import time
 
-comment_2021_12_29 = """
-I've thought about this some, and decided to accept the inefficiency of filtering 
-ticks for all subscriptions, since it makes the long lived tasks simpler and avoids
-queues and other heavy items that might be even worse.  Will continue forward with this
-for now...
-"""
-comment_2022_01_05 = """
-decided I was right(er) at the beginning.  Will instantiate streaming objects
-then explicitly describe network on a per security basis.
-"""
+from streamer import connect, ticks, candles, emacalc
+from streamer import davelogging as dl
+
+logger = dl.logger(__name__, dl.DEBUG, dl.logformat)
+logger.debug(f"__name__ is {__name__}")  # package name: streamer.davelogging
+logger.debug(f"__file__ is {__file__}")  # file: /whole/path/to/davelogging.py
 
 
 async def create(ib):
@@ -66,9 +62,15 @@ async def compose(
         # print(ema)
 
 
+async def main(gateway):
+    connection = connect.Connection(gateway)
+    start = time.perf_counter()
+    ib = await connection.connect_async()
+    print(f"connection took {time.perf_counter() - start} seconds")
+    # asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
+    await create(ib)
+
+
 if __name__ == "__main__":
-    connection = connect.Connection()
-    connection.select(connect.Connection.btcjo)
-    ib = connection.connect()
-    asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
-    asyncio.run(create(ib), debug=False)
+    gateway = connect.Btchfpaper()
+    asyncio.run(main(gateway), debug=True)

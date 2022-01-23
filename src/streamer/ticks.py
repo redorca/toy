@@ -1,25 +1,23 @@
 # std lib
 import asyncio
-import logging
-import sys
+import time
 from math import isclose
 
-import davelogging as dl
 
 # PyPI
 import ib_insync as ibi
 
 # local
-from streamer import config, connect
+from streamer import connect
+from streamer import davelogging as dl
 
-# print(f"__file__ is {__file__}")  # file: /whole/path/to/davelogging.py
-# print(f"__name__ is {__name__}")  # package name: streamer.davelogging
+
 logger = dl.logger(__name__, dl.DEBUG, dl.logformat)
+logger.debug(f"__name__ is {__name__}")  # package name: streamer.davelogging
+logger.debug(f"__file__ is {__file__}")  # file: /whole/path/to/davelogging.py
 
 
 class Ticks:
-    clientid_var = 10
-
     def __init__(self, ib_conn, symbol: str):
         self.ib = ib_conn
         self.symbol = symbol
@@ -27,19 +25,24 @@ class Ticks:
         self.latest_volume = -1
 
     async def run_a(self):
+        logger.debug("in run_a")
         contract = ibi.Stock(self.symbol, "SMART", "USD")
-        self.ib.reqMktData(contract)
+        tkr = self.ib.reqMktData(contract, snapshot=False)
+        logger.debug(f"type of tkr is {type(tkr)}")
         async for tickers in self.ib.pendingTickersEvent:
+            logger.debug(tickers)
             for ticker in tickers:
-                if (  # checking for a redundant tick:
+                # checking for a redundant tick
+                if (
                     # each Ticks object will see all subscriptions
-                    self.symbol != ticker.contract.symbol
-                    or self.latest_volume == ticker.volume
-                    # after market close, we get -$1 ticks of size 0.0
-                    or ticker.bidSize < 1.1  # don't use == with floats
-                    or ticker.bid < 0.0
-                    or ticker.ask < 0.0
-                    or isclose(ticker.halted, 0.0, abs_tol=0.1)
+                    self.symbol
+                    != ticker.contract.symbol
+                    # or self.latest_volume == ticker.volume
+                    # # after market close, we get -$1 ticks of size 0.0
+                    # or ticker.bidSize < 1.1  # don't use == with floats
+                    # or ticker.bid < 0.0
+                    # or ticker.ask < 0.0
+                    # or isclose(ticker.halted, 0.0, abs_tol=0.1)
                 ):  # redundant or bad ticker, ignore.
                     if len(self.queued_tickers) == 0:
                         continue
@@ -64,24 +67,27 @@ class Ticks:
                         f"  enqueued len={len(self.queued_tickers)}"
                     )
 
+    async def cycle(self):
+        print("in cycle")
+        while True:
+            something = await self.run_a()
+            if something is not None:
+                print(something)
+
     def stop(self):
         self.ib.disconnect()
 
 
 if __name__ == "__main__":
 
-    connection_info = {
-        "host": config.HOST,
-        "port": config.PORT,
-        "account": config.ACCOUNT,
-        "timeout": 5,
-    }
-    ib_conn = connect.Connection()
-    ib_conn.select(ib_conn.btcjo)
-    ib = ib_conn.connect()
-    app = Ticks(ib, "IBM")
+    gateway = connect.Btcjopaper()
+    conn = connect.Connection(gateway)
+    start = time.perf_counter()
+    ib = conn.connect()
+    print(f"connection took {time.perf_counter()-start:4.2f} seconds")
+    app = Ticks(ib, "TSLA")
 
     try:
-        asyncio.run(app.run_a())
+        asyncio.run(app.cycle())
     except (KeyboardInterrupt, SystemExit):
         app.stop()

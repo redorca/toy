@@ -22,7 +22,7 @@ def test_gateway():
     assert isinstance(gateway.timeout, float)
 
 
-def test_connection_object():
+def test_connection():
 
     conn = connect.Connection()
     assert isinstance(conn, connect.Connection)
@@ -31,7 +31,7 @@ def test_connection_object():
 
 
 # @pytest.mark.filterwarnings("ignore:DeprecationWarning")
-def test_connection():
+def test_connect():
     gateway = connect.Btcjopaper()
     conn = connect.Connection(gateway)
     try:
@@ -39,7 +39,13 @@ def test_connection():
         assert isinstance(ib.reqCurrentTime(), datetime.datetime)
     except AssertionError as e:
         raise e
+    except TimeoutError as e:
+        raise e(f"Couldn't connect to gateway {gateway.host}")
     except Exception as e:
         assert False, e
     finally:
         conn.close()
+
+
+def test_connect_async():
+    pass
