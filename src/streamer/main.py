@@ -6,6 +6,7 @@
 
 # standard library
 import asyncio
+from math import isclose
 
 # PyPI
 # import uvloop
@@ -17,8 +18,8 @@ from streamer import connect, ticks, candles, emacalc
 from streamer import davelogging as dl
 
 logger = dl.logger(__name__, dl.DEBUG, dl.logformat)
-logger.debug(f"__name__ is {__name__}")  # package name: streamer.davelogging
-logger.debug(f"__file__ is {__file__}")  # file: /whole/path/to/davelogging.py
+# logger.debug(f"__name__ is {__name__}")  # package name: streamer.davelogging
+# logger.debug(f"__file__ is {__file__}")  # file: /whole/path/to/davelogging.py
 
 
 async def create(ib):
@@ -26,7 +27,7 @@ async def create(ib):
     # first make objects
 
     task_set = set()
-    for symbol in ("TSLA",):  # "AAPL",
+    for symbol in ("TSLA",):  #  "AAPL",
         # connection_info["symbol"] = symbol
         # make the processing objects
         tick_src = ticks.Ticks(ib, symbol)
@@ -49,13 +50,44 @@ async def compose(
     ema_calculator: emacalc.EmaCalculator,
 ):
     """this connects the blocks from create"""
+    last_volume = 0
+    volume_initialized = False
+    largest_size = 0
     while True:
         tick = await tick_src.run_a()  # should keep emitting ticks
-        print(tick)
+        if tick is None:
+            continue
+
+        ############################################################
+        # quitting for the night, but
+        # this needs to migrate into candles that ignore the lastSize
+        # and instead follow the volume indicator
+        # discovered that redundant ticks of small size are emitted,
+        # and there are missing ticks where the volume jumps.
+        # need to decide how to handle prices.
+        # average of earlier and later tick?
+        #
+        logger.debug(
+            f"{tick.contract.symbol}"
+            f" ${tick.last:0.2f}"
+            f" sz:{tick.lastSize}"
+            f" vol:{tick.volume}"
+        )
+        largest_size = max(largest_size, tick.lastSize)
+        logger.debug(f"largest transaction size seen so far: {largest_size}")
+        if volume_initialized and not isclose(tick.lastSize + last_volume, tick.volume):
+            logger.error(
+                "========== ERROR ==============> "
+                f"{tick.contract.symbol}"
+                f" new vol: {tick.volume} != sum: {tick.lastSize + last_volume}"
+                f" difference: {tick.volume - last_volume - tick.lastSize}"
+            )
+        last_volume = tick.volume
+        volume_initialized = True
         candle = await candle_maker.run_a(tick)  # will filter them down to candles
         if candle is None:
             continue
-        print(candle)
+        logger.info(candle)
         ema = await ema_calculator.run_a(candle)  # incomplete
         if ema is None:
             continue
@@ -66,7 +98,7 @@ async def main(gateway):
     connection = connect.Connection(gateway)
     start = time.perf_counter()
     ib = await connection.connect_async()
-    print(f"connection took {time.perf_counter() - start} seconds")
+    logger.debug(f"connection took {time.perf_counter() - start} seconds")
     # asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
     await create(ib)
 

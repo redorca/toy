@@ -73,7 +73,7 @@ class CandleMakerBase:
         self.timestamps = list()
         self.symbol: Optional[str] = None
 
-    def re_init(self):
+    async def re_init(self):
         self.high = -1
         self.low = sys.maxsize
         self.volume = 0
@@ -84,10 +84,8 @@ class CandleMakerBase:
         del self.prices[:]
         del self.timestamps[:]
 
-    def run_a(self, ticker: ib_insync.Ticker):
-        # TODO: need a check here. when market is closed, we continue to get ticks
-        # of the last trade, even though halted==0.0. could look for weird
-        # data: bid & ask=-1, bidSize&askSize=0, volume does not increase.
+    async def run_a(self, ticker: ib_insync.Ticker):
+
         if self.start_time is None:  # cleared in re_init
             self.start_time = ticker.time
             self.start_timestamp = ticker.time.timestamp()
@@ -108,7 +106,7 @@ class CandleMakerTimed(CandleMakerBase):
         super().__init__()
         self.seconds = seconds
 
-    def run_a(self, ticker: ib_insync.Ticker):
+    async def run_a(self, ticker: ib_insync.Ticker):
         # https://stackoverflow.com/questions/29193127/is-it-faster-to-truncate-a-list-by-making-it-equal-to-a-slice-or-by-using-del
         timestamp = ticker.time.timestamp()
         if timestamp - self.start_timestamp > self.seconds:  # may exceed seconds
@@ -125,12 +123,12 @@ class CandleMakerTimed(CandleMakerBase):
                 median=statistics.median(self.prices),
                 number_ticks=len(self.prices),
             )
-            self.re_init()
+            await self.re_init()
             return candle
 
         # to keep timed candles from running late, we check time first and
         # emit existing candle if incoming time is over limit
-        super().run_a(ticker)
+        await super().run_a(ticker)
         return None
 
 
@@ -140,7 +138,7 @@ class CandleMakerCounted(CandleMakerBase):
         self.number_of_ticks = number
 
     async def run_a(self, ticker: ib_insync.Ticker):
-        super().run_a(ticker)
+        await super().run_a(ticker)
 
         if len(self.prices) >= self.number_of_ticks:
             # emit a candle
@@ -156,7 +154,7 @@ class CandleMakerCounted(CandleMakerBase):
                 median=statistics.median(self.prices),
                 number_ticks=len(self.prices),
             )
-            self.re_init()
+            await self.re_init()
             return candle
         else:
             return None
@@ -169,12 +167,12 @@ class CandleMakerDollarVolume(CandleMakerBase):
         self.max_dollar_volume: int = dollar_volume
         self.dollar_volume: float = 0.0
 
-    def re_init(self):
+    async def re_init(self):
         self.dollar_volume = 0
-        super().re_init()
+        await super().re_init()
 
     async def run_a(self, ticker: ib_insync.Ticker):
-        super().run_a(ticker)
+        await super().run_a(ticker)
         self.dollar_volume += float(ticker.last) * float(ticker.lastSize)
         if self.dollar_volume >= self.max_dollar_volume:
             # emit a candle
@@ -190,7 +188,7 @@ class CandleMakerDollarVolume(CandleMakerBase):
                 median=statistics.median(self.prices),
                 number_ticks=len(self.prices),
             )
-            self.re_init()
+            await self.re_init()
             return candle
         else:
             return None
