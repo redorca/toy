@@ -30,16 +30,16 @@ class Ticks:
         self.symbol = symbol
         self.queued_tickers = deque(maxlen=32)  # not dequeue, but double ended queue
         self.latest_volume = -1
-        self.post_queue_latest_volume = -1
 
     async def run_a(self):
-        logger.debug(f"starting {__name__}.run_a")
+        # logger.debug(f"starting {__name__}.run_a")
         contract = ibi.Stock(self.symbol, "SMART", "USD")
         tkr = self.ib.reqMktData(contract, snapshot=False)
         # logger.debug(f"type of tkr is {type(tkr)}")
         async for tickers in self.ib.pendingTickersEvent:
-            logger.debug(tickers)
             for ticker in tickers:
+                await asyncio.sleep(0)
+                # logger.debug(ticker)
                 # each Ticks object will see all subscriptions
                 # first check for redundant ticks
                 if (  # valid ticker data checks
@@ -53,19 +53,29 @@ class Ticks:
                 ):
                     self.latest_volume = ticker.volume
                     self.queued_tickers.append(ticker)
+                    q_len = len(self.queued_tickers)
+                    if q_len > 10:
+                        logger.debug(
+                            f"queued {ticker.contract.symbol}," f" queue len: {q_len}"
+                        )
+                # else:
+                #     logger.debug(
+                #         f"tossed non-matching ticker,"
+                #         f" queue len: {len(self.queued_tickers)}"
+                #     )
+
                 # can only return once per call, so we can get backed up
                 # use "bad" ticker events to help drain the queue
                 if len(self.queued_tickers) > 0:
                     ticker_ = self.queued_tickers.popleft()
                     await asyncio.sleep(0)  # printing and scrolling is slow
-                    logger.debug(
-                        f"{self.symbol}"
-                        #     f":${ticker.last}"
-                        #     f" sz:{ticker.lastSize}"
-                        #     f" vol:{ticker.volume}"
-                        f"  {len(self.queued_tickers)} tickers in queue"
-                    )
-                    # self.post_queue_latest_volume = ticker_.volume
+                    # logger.debug(
+                    #     f"{self.symbol}"
+                    #     #     f":${ticker.last}"
+                    #     #     f" sz:{ticker.lastSize}"
+                    #     #     f" vol:{ticker.volume}"
+                    #     f"  {len(self.queued_tickers)} tickers in queue"
+                    # )
                     return ticker_
                 else:
                     return None

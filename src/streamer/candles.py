@@ -60,42 +60,68 @@ class Candle:
         return val
 
 
+# Looking at incoming ticks, it was obvious that the incrementing transaction size
+# was not the same as the quoted daily volume figure.
+# So, decided not to count transactions size, but instead compute it from ticker.volume
+
+
 class CandleMakerBase:
     def __init__(self):
-        self.high = -1
-        self.low = sys.maxsize
-        # self.max_ticks = 1000
-        self.volume = 0
-        self.start_time = None
-        self.start_timestamp = None
-        self.end_time = None
-        self.prices = list()
-        self.timestamps = list()
+        """here, None is just a flag for unset. It's not really Optional in use"""
         self.symbol: Optional[str] = None
+        self.high: float = -1
+        self.low: float = sys.maxsize
+        # accumulates shares traded
+        self.candle_unit_volume: float = 0
+        # accumulates $ traded (estimate due to ticker issues)
+        self.candle_dollar_volume: float = 0
+        self.first_ticker_volume: Optional[float] = None  # in this candle
+        self.last_ticker_volume: Optional[float] = None
+        self.first_ticker_datetime: Optional[datetime.datetime] = None
+        self.last_ticker_datetime = self.first_ticker_datetime
+        # timestamps are unix timestamps, floating seconds since K&R started this mess
+        self.first_ticker_timestamp: Optional[float] = None
+        self.prices = list()
+        self.shares = list()
+        self.timestamps = list()
 
     async def re_init(self):
         self.high = -1
         self.low = sys.maxsize
-        self.volume = 0
-        self.start_time = None
-        self.start_timestamp = None
-        self.end_time = None
+        self.candle_unit_volume = 0
+        self.candle_dollar_volume = 0
+        if self.last_ticker_volume is not None:
+            self.first_ticker_volume = self.last_ticker_volume
+        self.first_ticker_datetime = None
+        self.first_ticker_timestamp = None
         # https://stackoverflow.com/questions/29193127/is-it-faster-to-truncate-a-list-by-making-it-equal-to-a-slice-or-by-using-del
         del self.prices[:]
+        del self.shares[:]
         del self.timestamps[:]
 
     async def run_a(self, ticker: ib_insync.Ticker):
-
-        if self.start_time is None:  # cleared in re_init
-            self.start_time = ticker.time
-            self.start_timestamp = ticker.time.timestamp()
-            if self.symbol is None:
-                self.symbol = ticker.contract.symbol
+        """general housekeeping for all candles"""
+        if self.symbol is None:
+            self.symbol = ticker.contract.symbol
+        if self.first_ticker_datetime is None:  # cleared in re_init
+            self.first_ticker_datetime = ticker.time
+            self.first_ticker_timestamp = ticker.time.timestamp()
+        self.last_ticker_datetime = ticker.time
         self.high = max((self.high, ticker.last))
         self.low = min((self.low, ticker.last))
-        self.volume += ticker.lastSize
-        self.end_time = ticker.time
+        if self.first_ticker_volume is None:
+            self.first_ticker_volume = ticker.volume
+        self.last_ticker_volume = ticker.volume
+        try:
+            number_shares = max(
+                self.last_ticker_volume - self.first_ticker_volume, ticker.lastSize
+            )
+        except TypeError:  # when first_ticker_volume is None
+            number_shares = ticker.lastSize
+        self.candle_unit_volume += number_shares
+        self.candle_dollar_volume += number_shares * ticker.last
         self.prices.append(ticker.last)  # most recent price
+        self.shares.append(number_shares)
         self.timestamps.append(ticker.time.timestamp())  # a float, not a datetime
 
 
@@ -109,7 +135,7 @@ class CandleMakerTimed(CandleMakerBase):
     async def run_a(self, ticker: ib_insync.Ticker):
         # https://stackoverflow.com/questions/29193127/is-it-faster-to-truncate-a-list-by-making-it-equal-to-a-slice-or-by-using-del
         timestamp = ticker.time.timestamp()
-        if timestamp - self.start_timestamp > self.seconds:  # may exceed seconds
+        if timestamp - self.first_ticker_timestamp > self.seconds:  # may exceed seconds
             # time to emit a candle
             candle = Candle(
                 symbol=ticker.contract.symbol,
@@ -117,8 +143,8 @@ class CandleMakerTimed(CandleMakerBase):
                 high=max(self.prices),
                 low=min(self.prices),
                 closing=self.prices[-1],
-                start=self.start_time,
-                end=self.end_time,
+                start=self.first_ticker_datetime,
+                end=self.last_ticker_timestamp,
                 average=statistics.mean(self.prices),
                 median=statistics.median(self.prices),
                 number_ticks=len(self.prices),
@@ -148,8 +174,8 @@ class CandleMakerCounted(CandleMakerBase):
                 high=max(self.prices),
                 low=min(self.prices),
                 closing=self.prices[-1],
-                start=self.start_time,
-                end=self.end_time,
+                start=self.first_ticker_datetime,
+                end=self.last_ticker_timestamp,
                 average=statistics.mean(self.prices),
                 median=statistics.median(self.prices),
                 number_ticks=len(self.prices),
@@ -164,26 +190,24 @@ class CandleMakerDollarVolume(CandleMakerBase):
     def __init__(self, dollar_volume=1000000):
         super().__init__()
         # our candles contain >= max_dollar_volume
-        self.max_dollar_volume: int = dollar_volume
-        self.dollar_volume: float = 0.0
+        self.max_dollar_volume: float = float(dollar_volume)
 
     async def re_init(self):
-        self.dollar_volume = 0
         await super().re_init()
 
     async def run_a(self, ticker: ib_insync.Ticker):
         await super().run_a(ticker)
-        self.dollar_volume += float(ticker.last) * float(ticker.lastSize)
-        if self.dollar_volume >= self.max_dollar_volume:
+        await asyncio.sleep(0)
+        if self.candle_dollar_volume >= self.max_dollar_volume:
             # emit a candle
             candle = Candle(
-                symbol=ticker.contract.symbol,
+                symbol=self.symbol,
                 opening=self.prices[0],
-                high=max(self.prices),
-                low=min(self.prices),
+                high=self.high,
+                low=self.low,
                 closing=self.prices[-1],
-                start=self.start_time,
-                end=self.end_time,
+                start=self.first_ticker_datetime,
+                end=self.last_ticker_datetime,
                 average=statistics.mean(self.prices),
                 median=statistics.median(self.prices),
                 number_ticks=len(self.prices),

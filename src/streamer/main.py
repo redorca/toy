@@ -6,6 +6,7 @@
 
 # standard library
 import asyncio
+from collections import defaultdict
 from math import isclose
 
 # PyPI
@@ -27,11 +28,16 @@ async def create(ib):
     # first make objects
 
     task_set = set()
-    for symbol in ("TSLA",):  #  "AAPL",
+    dollar_volume = defaultdict(lambda: 100000, {"RSP": 50000})
+    for symbol in (
+        "TSLA",
+        "AAPL",
+        "RSP",
+    ):  #
         # connection_info["symbol"] = symbol
         # make the processing objects
         tick_src = ticks.Ticks(ib, symbol)
-        candle_maker = candles.CandleMakerDollarVolume(dollar_volume=100000)
+        candle_maker = candles.CandleMakerDollarVolume(dollar_volume[symbol])
         ema_calculator = emacalc.EmaCalculator()
 
         task_set.add(
@@ -74,10 +80,10 @@ async def compose(
             f" vol:{tick.volume}"
         )
         largest_size = max(largest_size, tick.lastSize)
-        logger.debug(f"largest transaction size seen so far: {largest_size}")
-        if volume_initialized and not isclose(tick.lastSize + last_volume, tick.volume):
+        # logger.debug(f"largest transaction size seen so far: {largest_size}")
+        if volume_initialized and (tick.volume - tick.lastSize - last_volume > 10.0):
             logger.error(
-                "========== ERROR ==============> "
+                "========== BIG JUMP ==============> "
                 f"{tick.contract.symbol}"
                 f" new vol: {tick.volume} != sum: {tick.lastSize + last_volume}"
                 f" difference: {tick.volume - last_volume - tick.lastSize}"
@@ -87,7 +93,7 @@ async def compose(
         candle = await candle_maker.run_a(tick)  # will filter them down to candles
         if candle is None:
             continue
-        logger.info(candle)
+        logger.info(f"==========  CANDLE  ==============> {candle}")
         ema = await ema_calculator.run_a(candle)  # incomplete
         if ema is None:
             continue
@@ -105,4 +111,4 @@ async def main(gateway):
 
 if __name__ == "__main__":
     gateway = connect.Btchfpaper()
-    asyncio.run(main(gateway), debug=True)
+    asyncio.run(main(gateway), debug=False)
