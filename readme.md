@@ -1,13 +1,15 @@
-# Toy Project Async
+# Legacy work
+
+## Toy Project Async
 
 Purpose is to create an async module that communicates with IB and TA as fast as possible while maintaining reliability
 and scalability
 
-## To run
+### To run
 
 `make run ARGS=trade`
 
-### Example output:
+#### Example output:
 ```bash
 make run ARGS=trade
 Installing dependencies from lock file
@@ -42,12 +44,12 @@ No dependencies to install or update
 
 ```
 
-## To build and run in docker:
+### To build and run in docker:
 
 `make docker_build`
 `make docker_run`
 
-# TO build a binary for any platform:
+## TO build a binary for any platform:
 
 `make build`
 
