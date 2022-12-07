@@ -2,8 +2,8 @@
 # Collection of thoughts, notes, observations, and overall progress of development.
 #
 
-[December]
+[December:07]
         Deleted Bill.0 and generated a new branch, bill_a, from master.
         Verified the app works and generated data streams and candles.
 
-
+        TODO: Figure out IO, in particular tainted actors and boxes.

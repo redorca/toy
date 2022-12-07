@@ -6,6 +6,7 @@
 
         References for haskell:
                 https://www.haskell.org/ghcup/
+                http://learnyouahaskell.com/chapters
 
         Using ghcup to install haskell and ghci, effectively a shell akin to python.
 
