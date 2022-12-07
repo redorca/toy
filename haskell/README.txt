@@ -4,3 +4,8 @@
 
         Any development of an app written in Haskell will reside within.
 
+        References for haskell:
+                https://www.haskell.org/ghcup/
+
+        Using ghcup to install haskell and ghci, effectively a shell akin to python.
+
