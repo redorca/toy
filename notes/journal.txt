@@ -10,3 +10,14 @@
 
         Pivot back to python to complete Dave's work.
 
+        Discussed process and data flow with Dave.
+            * asyncio needs return values to know when an event is done.
+            * connect.py handles the netowrk directed acycle graph
+            * 
+
+        Observed the following:
+            * When the data flow pattern is very choppy likely the market data source
+              is closed.
+
+            * Candle events can be used to debug streams and monitor frequency of
+              data, moment of data.
