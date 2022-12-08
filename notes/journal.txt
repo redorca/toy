@@ -7,3 +7,6 @@
         Verified the app works and generated data streams and candles.
 
         TODO: Figure out IO, in particular tainted actors and boxes.
+
+        Pivot back to python to complete Dave's work.
+
