@@ -4,6 +4,13 @@
 # Can read and process our saved file with a little work.
 # don't forget to add in logging real soon now.
 
+"""
+    TODO: Add flow monitors to allow flow rate adjustments to the data
+          streams, track stream efficiency (meaningful ticks / all ticks).
+
+    TODO: Add wall clock check to know whether data is from an active market or not.
+"""
+
 # standard library
 import asyncio
 from collections import defaultdict
@@ -40,6 +47,9 @@ async def create(ib):
         candle_maker = candles.CandleMakerDollarVolume(dollar_volume[symbol])
         ema_calculator = emacalc.EmaCalculator()
 
+        """
+            Create a task per Tick() security, add it to a set for later obsrvation
+        """
         task_set.add(
             asyncio.create_task(
                 compose(tick_src, candle_maker, ema_calculator), name=symbol
@@ -60,6 +70,9 @@ async def compose(
     volume_initialized = False
     largest_size = 0
     while True:
+        """
+                Run a loop for each stock/security a Tick() object represents:
+        """
         tick = await tick_src.run_a()  # should keep emitting ticks
         if tick is None:
             continue

@@ -20,10 +20,12 @@ logger = dl.logger(__name__, dl.DEBUG, dl.logformat)
 
 
 class Ticks:
-    """Ticks objects clean up the problems with incoming tickers,
-    and deliver a "clean" stream of Ticker objects.
-    It removes redundant ticker data,
-    and fills in when volume increases without showing a matching lastSize"""
+    """
+        Ticks objects clean up the problems with incoming tickers,
+        and deliver a "clean" stream of Ticker objects.
+        It removes redundant ticker data,
+        and fills in when volume increases without showing a matching lastSize
+    """
 
     def __init__(self, ib_conn, symbol: str):
         self.ib = ib_conn
@@ -33,6 +35,9 @@ class Ticks:
 
     async def run_a(self):
         # logger.debug(f"starting {__name__}.run_a")
+        """
+            Iniitiate contact with IB and establish a data stream for a particular subscription.
+        """
         contract = ibi.Stock(self.symbol, "SMART", "USD")
         tkr = self.ib.reqMktData(contract, snapshot=False)
         # logger.debug(f"type of tkr is {type(tkr)}")
@@ -67,6 +72,10 @@ class Ticks:
                 # can only return once per call, so we can get backed up
                 # use "bad" ticker events to help drain the queue
                 if len(self.queued_tickers) > 0:
+                    """
+                        If this particular ticker stream (subscription) actually contains
+                        ticks then pop and return the oldest.
+                    """
                     ticker_ = self.queued_tickers.popleft()
                     await asyncio.sleep(0)  # printing and scrolling is slow
                     # logger.debug(
@@ -78,10 +87,17 @@ class Ticks:
                     # )
                     return ticker_
                 else:
+                    """
+                        The queue hasn't any elements so return None.
+                        Async calls always return some value else async gather won't finish.
+                    """
                     return None
 
     async def cycle(self):
-        print("in cycle")
+        """
+            create an event loop on run_a()
+        """
+        logger.debug(f"In Cycle:")
         while True:
             something = await self.run_a()
             if something is not None:
@@ -101,6 +117,9 @@ if __name__ == "__main__":
     app = Ticks(ib, "TSLA")
 
     try:
+        """
+            Start the asyncio event loop
+        """
         asyncio.run(app.cycle())
     except (KeyboardInterrupt, SystemExit):
         app.stop()

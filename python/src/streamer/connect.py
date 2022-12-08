@@ -14,8 +14,9 @@ logger = dl.logger(__name__, dl.DEBUG, dl.logformat)
 
 
 class Gateway:
-    """configuration details common to all gateways
-    including a local TradersWorkstation
+    """
+        configuration details common to all gateways
+        including a local TradersWorkstation
     """
 
     host: str = None
