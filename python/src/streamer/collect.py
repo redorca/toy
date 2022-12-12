@@ -20,12 +20,11 @@ class Gateway:
     """
 
     host: str = None
-    port: int =  None
+    port: int = None
     account: str = None
-    timeout: float = None 
+    timeout: float = None
 
-    def __init__(self, host, port, account, timeout):
-        print(f"Gateway :: host = {host}, port = {port}")
+    def __init__(self, host=None, port=None,  account=None, timeout=None):
         self.environment_overrider()
         if self.host is None:
             self.host = config.gateway_hosts.get(host)
@@ -35,7 +34,7 @@ class Gateway:
             self.account = account
         if self.timeout is None:
             self.timeout = timeout
-
+  
     def environment_overrider(self):
         if (account_ := os.getenv("TB_ACCOUNT")) is not None:
             self.account = account_
@@ -61,12 +60,9 @@ class TradersWorkstation(Gateway):
 
 
 class Btcjopaper(Gateway):
-    def __init__(self):
-        port = 4002
-        host = config.gateway_hosts.get("btcjopaper", "btcjopaper.rockyahoo.com")
-        account = "DF3987931"
-        print(f"Btcjopaper :: host = {self.host}, port = {self.port}")
-        return Gateway(host, port, account, 100)
+    host = config.gateway_hosts.get("btcjopaper", "btcjopaper.rockyahoo.com")
+    account = "DF3987931"
+
 
 class Btchfpaper(Gateway):
     host = config.gateway_hosts.get("btchfpaper", "btchfpaper.rockyahoo.com")
@@ -96,7 +92,6 @@ class Connection:
     client_id = 10
 
     def __init__(self, gateway: Optional[Gateway] = None):
-        print(f"b::a")
         if gateway is None:
             self.gateway = TradersWorkstation()
         else:
@@ -136,9 +131,7 @@ class Connection:
 
 
 if __name__ == "__main__":
-    print(f"a::a")
     conn = Connection(Btcjopaper())
-    print(f"a::b")
     ib = conn.connect()
 
     print("done")
