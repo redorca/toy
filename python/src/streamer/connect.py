@@ -20,37 +20,30 @@ class Gateway:
     """
 
     host: str = None
-    port: int =  None
+    port: int = 4002
     account: str = None
-    timeout: float = None 
+    timeout: float = 10.0
 
-    def __init__(self, host, port, account, timeout):
-        print(f"Gateway :: host = {host}, port = {port}")
+    def __init__(self):
         self.environment_overrider()
-        if self.host is None:
-            self.host = config.gateway_hosts.get(host)
-        if self.port is None:
-            self.port = port
-        if self.account is None:
-            self.account = account
-        if self.timeout is None:
-            self.timeout = timeout
 
     def environment_overrider(self):
-        if (account_ := os.getenv("TB_ACCOUNT")) is not None:
-            self.account = account_
-            print(f"using account '{self.account}' from environment variable TB_ACCOUNT")
-        if(host_ := os.getenv("TB_HOST")) is not None:
-            self.host = config.gateway_hosts.get(host_)
-            print(f"connecting to '{self.host}' from environment variable TB_HOST")
-        if(port_ := os.getenv("TB_PORT")) is not None:
-            self.port = int(port_)
-            print(f"using port {self.port} from environment variable TB_PORT")
-        if (timeout_ := os.getenv("TB_TIMEOUT")) is not None:
-            self.timeout = float(timeout_)
-            print(f"using port {self.timeout} from environment variable TB_PORT")
+        acct_ = os.getenv("TB_ACCOUNT")  # getenv returns None if not set
+        if acct_ is not None:
+            print(f"using account '{acct_}' from environment variable TB_ACCOUNT")
+            self.account = acct_
+        host_ = os.getenv("TB_HOST")
+        if host_ is not None:
+            print(f"connecting to '{host_}' from environment variable TB_HOST")
+            self.host = host_
+        port_ = os.getenv("TB_PORT")
+        if port_ is not None:
+            port_ = int(port_)
+            print(f"using port {port_} from environment variable TB_PORT")
+            self.port = port_
+        timeout = os.getenv("TB_TIMEOUT")
 
-    def set_timeout(self, timeout: Union[int, float]):
+    def change_timeout(self, timeout: Union[int, float]):
         self.timeout = float(timeout)
 
 
@@ -61,12 +54,9 @@ class TradersWorkstation(Gateway):
 
 
 class Btcjopaper(Gateway):
-    def __init__(self):
-        port = 4002
-        host = config.gateway_hosts.get("btcjopaper", "btcjopaper.rockyahoo.com")
-        account = "DF3987931"
-        print(f"Btcjopaper :: host = {self.host}, port = {self.port}")
-        return Gateway(host, port, account, 100)
+    host = config.gateway_hosts.get("btcjopaper", "btcjopaper.rockyahoo.com")
+    account = "DF3987931"
+
 
 class Btchfpaper(Gateway):
     host = config.gateway_hosts.get("btchfpaper", "btchfpaper.rockyahoo.com")
@@ -86,17 +76,16 @@ class GatewayFromEnvironment(Gateway):
 
 class Connection:
     """
-        this class provides a way to manage connection parameters,
-        but the actual connection parameters are imported from streamer.config
-        and passwords are kept in streamer.secrets.
-        Streamer.secrets is NOT pushed to the repo.
-        Use secrets_template.py as your guide to making your own.
+    this class provides a way to manage connection parameters,
+    but the actual connection parameters are imported from streamer.config
+    and passwords are kept in streamer.secrets.
+    Streamer.secrets is NOT pushed to the repo.
+    Use secrets_template.py as your guide to making your own.
     """
 
     client_id = 10
 
     def __init__(self, gateway: Optional[Gateway] = None):
-        print(f"b::a")
         if gateway is None:
             self.gateway = TradersWorkstation()
         else:
@@ -136,9 +125,7 @@ class Connection:
 
 
 if __name__ == "__main__":
-    print(f"a::a")
     conn = Connection(Btcjopaper())
-    print(f"a::b")
     ib = conn.connect()
 
     print("done")
