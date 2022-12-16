@@ -39,6 +39,8 @@ class Ticks:
             Iniitiate contact with IB and establish a data stream for a particular subscription.
         """
         contract = ibi.Stock(self.symbol, "SMART", "USD")
+
+        # start the ticker stream and events. tkr is a throw away here.
         tkr = self.ib.reqMktData(contract, snapshot=False)
         # logger.debug(f"type of tkr is {type(tkr)}")
         async for tickers in self.ib.pendingTickersEvent:
@@ -74,7 +76,7 @@ class Ticks:
                 if len(self.queued_tickers) > 0:
                     """
                         If this particular ticker stream (subscription) actually contains
-                        ticks then pop and return the oldest.
+                        ticks then pop the oldest from the queue and return it.
                     """
                     ticker_ = self.queued_tickers.popleft()
                     await asyncio.sleep(0)  # printing and scrolling is slow
