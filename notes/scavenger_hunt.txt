@@ -1,0 +1,197 @@
+
+
+    Learn some VI commands by following a command trail.
+
+
+ To go to the bottom of a file use these commands:
+ :$
+ shift+G
+
+==> Go to the bottom of the file for the next instruction.
+==> Return to your previous line
+
+# spi-tools
+
+This package contains some simple command line tools to help using Linux spidev devices.
+  Delete characters using 'x', all characters from the cursor to the end of the line shift+D
+  Undelete with shift+U
+  Repeat the previous action using '.'
+====> Find another instance of the 8th word delete it.
+
+Version 1.0.1
+
+## Content
+
+### `spi-config`
+
+Query or set the SPI configuration (mode, speed, bits per word, etc.)
+
+### `spi-pipe`
+
+Send and receive data simultaneously to and from a SPI device.
+
+## License
+
+The tools are released under the GPLv2 license. See `LICENSE` file for detailstools
+  Deleting a character, a word, a line, saves that deletion in a buffer.
+  That buffer can then be used to place its contents anywhere in the file.
+  So the deleted word above can be put at the end of the line with 'p'.
+  To place that deletion before a word use shift+P
+====> After the deletion insert that word at the end of the line. Count the number of characters
+      of the new word and move backwards to the Nth word where N is the number of characters.
+## Author
+
+Christophe Blaess
+https://www.blaess.fr/christophe
+
+## Installation
+
+First, get the latest version on https://github.com/cpb-/spi-tools.git.
+Then enter the directory and execute:
+
+```
+$ autoreconf -fim
+$ ./configure
+$ make
+```
+ To move the cursor around the screen use shift+L, move to the bottom of the screen,
+                                          shift+H, movce to the top of the screen,
+                                          shift+M, move to the mniddle of the screen.
+                                          shift+$, move to the end of the line
+                                          shift+^, move to the first character in a line
+
+===> Jump down a number of lines equal to the position of the first character of the above line.
+
+Then you can run `make install` (probably with `sudo`) to install them and the man pages.
+
+If you have to use a cross-compilation toolchain, add the `--host` option to
+the `./configure` command, as in `./configure --host=arm-linux`. This is the
+prefix to be inserted before all the toolchain commands (giving for example
+`arm-linux-gcc`).
+
+You can use `make uninstall` (with `sudo`) to remove the installed files.
+
+## Usage
+
+### spi-config usage
+
+#### options
+
+* `-d --device=<dev>`  use the given spi-dev character device.
+* `-q --query`         print the current configuration.
+* `-m --mode=[0-3]`    use the selected spi mode.
+* `-l --lsb={0,1}`     LSB first (1) or MSB first (0).
+* `-b --bits=[7...]`   bits per word.
+* `-s --speed=<int>`   set the speed in Hz.
+* `-r --spirdy={0,1}`   set the SPI_READY spi mode flag.
+* `-w --wait`          block, keeping the file descriptor open.
+* `-h --help`          help screen.
+* `-v --version`       display the version number.
+
+#### Read the current configuration
+
+```
+$ spi-config -d /dev/spidev0.0 -q
+/dev/spidev0.0: mode=0, lsb=0, bits=8, speed=500000
+$
+```
+
+#### Change the clock frequency and read it again
+
+```
+$ spi-config -d /dev/spidev0.0 -s 10000000
+$ spi-config -d /dev/spidev0.0 -q
+/dev/spidev0.0: mode=0, lsb=0, bits=8, speed=10000000
+$
+===  Move to the beginning of a word is 'w', ignore punctuation use 'W'
+     Move to the end of a word is 'e', ignore punctuation use 'E'
+
+===> Move to line 15 and find the 8th word.
+```
+
+Note: on some platforms, the speed is reset to a default value when the file descriptor is closed.
+To avoid this, one can use the `-w` option that keep the file descriptor open. For example:
+
+```
+$ spi-config -d /dev/spidev0.0 -s 10000000 -w &
+$ PID=$!
+```
+                         Note Note
+                         Move up and down a file using the 'j' and 'k' keys.
+                        'j' moves one line down and 'k' moves one line up.
+
+====> Move down 10 lines
+And when you don't need the SPI device anymore:
+
+```
+$ kill $PID
+```
+
+### spi-pipe usage
+
+#### Options
+====> Another way to move 10 lines is '10j' or '10k' so move down 50 more lines
+
+* `-d --device=<dev>`    use the given spi-dev character device.
+* `-m --mode=[0-3]`      use the selected spi mode.
+* `-s --speed=<speed>`   Maximum SPI clock rate (in Hz).
+* `-l --lsb={0,1}`       LSB first (1) or MSB first (0).
+* `-B --bits=[7...]`     bits per word.
+* `-r --spirdy={0,1}`    set the SPI_READY spi mode flag.
+* `-b --blocksize=<int>` transfer block size in byte.
+* `-n --number=<int>`    number of blocks to transfer.
+* `-h --help`            help screen.
+* `-v --version`         display the version number.
+
+#### Send and receive simultaneously
+
+Sending data from `command-1` to SPI link and receiving data from SPI link to `command-2`
+
+```
+$ command_1 | spi-pipe -d /dev/spidev0.0 | command_2
+```
+
+Note that `command_1`, `command_2` and `spi-pipe` run simultaneously in three parallel processes.
+
+#### Send data through the SPI link
+
+```
+$ command_1 | spi-pipe -d /dev/spidev0.0
+```
+
+#### Receive data from the SPI link
+
+```
+$ spi-pipe -d /dev/spidev0.0 < /dev/zero | command_2
+```
+
+You can also use `command_2 < /dev/spidev0.0` but with `spi-pipe` you control what is sent to the device (always `0` in this case).
+
+#### Read 40 blocks of 4 bytes from the SPI link
+===> go to the line number equivalent to the length of that line:
+
+```
+$ spi-pipe -d /dev/spidev0.0 -b 4 -n 40 < /dev/zero | command_2
+```
+
+#### Send binary commands through the SPI link
+
+You can use the shell `printf` command to format binary data to send.
+
+For example, to send the bytes sequence 0x01-0x82-0xF3 and see the reply, use:
+
+  Similar to 'j' and 'k' are 'h' and 'l' which move the cursor backwards and forwards on a line.
+===> Search for the the text "Read 4"  and find the length of that line.
+
+```
+$ printf '\x01\x82\xF3' | spi-pipe -d /dev/spidev0.0 | hexdump -C
+```
+
+
+to search for something the forward slash followed by the keyword, or some portion of it.
+E.G. /Note
+Search is case sensitive.
+
+===>  Use "" to return to your previous position 
+===>  Search for the word: Note
+
