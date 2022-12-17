@@ -106,7 +106,7 @@ async def compose(
         candle = await candle_maker.run_a(tick)  # will filter them down to candles
         if candle is None:
             continue
-        logger.info(f"==========  CANDLE  ==============> {candle}")
+        logger.info(f"=======  CANDLE  =========> {candle}")
         ema = await ema_calculator.run_a(candle)  # incomplete
         if ema is None:
             continue
