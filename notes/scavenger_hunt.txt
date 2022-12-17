@@ -12,7 +12,7 @@
 
 # spi-tools
 
-This package contains some simple command line tools to help using Linux spidev devices.
+This package contains some simple command line to help using Linux spidev devices.
   Delete characters using 'x', all characters from the cursor to the end of the line shift+D
   Undelete with shift+U
   Repeat the previous action using '.'
@@ -32,7 +32,8 @@ Send and receive data simultaneously to and from a SPI device.
 
 ## License
 
-The tools are released under the GPLv2 license. See `LICENSE` file for detailstools
+The tools are released under the GPLv2 license. See `LICENSE` file for details
+
   Deleting a character, a word, a line, saves that deletion in a buffer.
   That buffer can then be used to place its contents anywhere in the file.
   So the deleted word above can be put at the end of the line with 'p'.
@@ -106,7 +107,7 @@ $
 ===  Move to the beginning of a word is 'w', ignore punctuation use 'W'
      Move to the end of a word is 'e', ignore punctuation use 'E'
 
-===> Move to line 15 and find the 8th word.
+===> Move to line 15 and find the 8th word. ':15 8W"
 ```
 
 Note: on some platforms, the speed is reset to a default value when the file descriptor is closed.
