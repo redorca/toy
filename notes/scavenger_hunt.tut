@@ -3,12 +3,12 @@
     Learn some VI commands by following a command trail.
 
 
- To go to the bottom of a file use these commands:
- :$
- shift+G
+!!  To go to the bottom of a file use these commands:
+!!  :$
+!!  shift+G
 
-==> Go to the bottom of the file for the next instruction.
-==> Return to your previous line
+====> Go to the bottom of the file for the next instruction.
+====> Return to your previous line
 
 # spi-tools
 
@@ -34,12 +34,12 @@ Send and receive data simultaneously to and from a SPI device.
 
 The tools are released under the GPLv2 license. See `LICENSE` file for details
 
-  Deleting a character, a word, a line, saves that deletion in a buffer.
-  That buffer can then be used to place its contents anywhere in the file.
-  So the deleted word above can be put at the end of the line with 'p'.
-  To place that deletion before a word use shift+P
+!!   Deleting a character, a word, a line, saves that deletion in a buffer.
+!!   That buffer can then be used to place its contents anywhere in the file.
+!!   So the deleted word above can be put at the end of the line with 'p'.
+!!   To place that deletion before a word use shift+P
 ====> After the deletion insert that word at the end of the line. Count the number of characters
-      of the new word and move backwards to the Nth word where N is the number of characters.
+====> of the new word and move backwards to the Nth word where N is the number of characters.
 ## Author
 
 Christophe Blaess
@@ -55,13 +55,13 @@ $ autoreconf -fim
 $ ./configure
 $ make
 ```
- To move the cursor around the screen use shift+L, move to the bottom of the screen,
-                                          shift+H, movce to the top of the screen,
-                                          shift+M, move to the mniddle of the screen.
-                                          shift+$, move to the end of the line
-                                          shift+^, move to the first character in a line
+!!  To move the cursor around the screen use shift+L, move to the bottom of the screen,
+!!                                           shift+H, movce to the top of the screen,
+!!                                           shift+M, move to the mniddle of the screen.
+!!                                           shift+$, move to the end of the line
+!!                                           shift+^, move to the first character in a line
 
-===> Jump down a number of lines equal to the position of the first character of the above line.
+====> Jump down a number of lines equal to the position of the first character of the above line.
 
 Then you can run `make install` (probably with `sudo`) to install them and the man pages.
 
@@ -104,10 +104,10 @@ $ spi-config -d /dev/spidev0.0 -s 10000000
 $ spi-config -d /dev/spidev0.0 -q
 /dev/spidev0.0: mode=0, lsb=0, bits=8, speed=10000000
 $
-===  Move to the beginning of a word is 'w', ignore punctuation use 'W'
-     Move to the end of a word is 'e', ignore punctuation use 'E'
+====>  Move to the beginning of a word is 'w', ignore punctuation use 'W'
+====>  Move to the end of a word is 'e', ignore punctuation use 'E'
 
-===> Move to line 15 and find the 8th word. ':15 8W"
+====> Move to line 15 and find the 8th word. ':15 8W"
 ```
 
 Note: on some platforms, the speed is reset to a default value when the file descriptor is closed.
@@ -117,9 +117,9 @@ To avoid this, one can use the `-w` option that keep the file descriptor open. F
 $ spi-config -d /dev/spidev0.0 -s 10000000 -w &
 $ PID=$!
 ```
-                         Note Note
-                         Move up and down a file using the 'j' and 'k' keys.
-                        'j' moves one line down and 'k' moves one line up.
+!!                       Note Note
+!!                       Move up and down a file using the 'j' and 'k' keys.
+!!                      'j' moves one line down and 'k' moves one line up.
 
 ====> Move down 10 lines
 And when you don't need the SPI device anymore:
@@ -169,7 +169,7 @@ $ spi-pipe -d /dev/spidev0.0 < /dev/zero | command_2
 You can also use `command_2 < /dev/spidev0.0` but with `spi-pipe` you control what is sent to the device (always `0` in this case).
 
 #### Read 40 blocks of 4 bytes from the SPI link
-===> go to the line number equivalent to the length of that line:
+====> go to the line number equivalent to the length of that line:
 
 ```
 $ spi-pipe -d /dev/spidev0.0 -b 4 -n 40 < /dev/zero | command_2
@@ -181,18 +181,18 @@ You can use the shell `printf` command to format binary data to send.
 
 For example, to send the bytes sequence 0x01-0x82-0xF3 and see the reply, use:
 
-  Similar to 'j' and 'k' are 'h' and 'l' which move the cursor backwards and forwards on a line.
-===> Search for the the text "Read 4"  and find the length of that line.
+!!  Similar to 'j' and 'k' are 'h' and 'l' which move the cursor backwards and forwards on a line.
+====> Search for the the text "Read 4"  and find the length of that line.
 
 ```
 $ printf '\x01\x82\xF3' | spi-pipe -d /dev/spidev0.0 | hexdump -C
 ```
 
 
-to search for something the forward slash followed by the keyword, or some portion of it.
-E.G. /Note
-Search is case sensitive.
+!!  to search for something the forward slash followed by the keyword, or some portion of it.
+!!  E.G. /Note
+!!  Search is case sensitive.
 
-===>  Use "" to return to your previous position 
-===>  Search for the word: Note
+====>  Use "" to return to your previous position 
+====>  Search for the word: Note
 
