@@ -28,7 +28,7 @@ from streamer import davelogging as dl
 logger = dl.logger(__name__, dl.DEBUG, dl.logformat)
 # logger.debug(f"__name__ is {__name__}")  # package name: streamer.davelogging
 # logger.debug(f"__file__ is {__file__}")  # file: /whole/path/to/davelogging.py
-
+Securities = [ "AAPL", "TSLA", "RSP",] 
 
 async def create(ib):
     # this is where we add processing block (Arun's block diagram)
@@ -58,7 +58,6 @@ async def create(ib):
     # print('in main')
     results = await asyncio.gather(*task_set)
     return results
-
 
 async def compose(
     tick_src: ticks.Ticks,
@@ -112,6 +111,26 @@ async def compose(
             continue
         # print(ema)
 
+async def kreate(ib, *Symbols):
+    # this is where we add processing block (Arun's block diagram)
+    # first make objects
+
+    for symbol in Symbols:
+        logger.debug(f"set tick {symbol}")
+        tick_src = ticks.Ticks(ib, symbol)
+
+    task = asyncio.create_task(kompose(tick_src))
+    results = await asyncio.gather(task)
+    return results
+
+async def kompose(tick_src):
+    while True:
+        """
+                Run a loop for each stock/security a Tick() object represents:
+        """
+        logger.debug("A==a")
+        await tick_src.run_b()
+
 
 async def main(gateway):
     connection = connect.Connection(gateway)
@@ -119,7 +138,8 @@ async def main(gateway):
     ib = await connection.connect_async()
     logger.debug(f"connection took {time.perf_counter() - start} seconds")
     # asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
-    await create(ib)
+    # await create(ib)
+    await kreate(ib,*Securities)
 
 
 if __name__ == "__main__":
