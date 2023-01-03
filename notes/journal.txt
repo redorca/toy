@@ -21,3 +21,14 @@
 
             * Candle events can be used to debug streams and monitor frequency of
               data, moment of data.
+
+[January:03-23]
+        Where the code listens for pending ticker events it filters the events for those
+        that match a given symbol and throw away everything else. This process occurs for
+        all symbols with a contract.
+
+        pendingTickersEvent is a global queue of data and is not meant to be a per symbol
+        resource. It monitors the stream and queues all activity registered.
+
+        This means that the data the code accesses for each symbol duplicates what is done
+        for all symbols so in toy's case there is 2x more processing happening than needed.
