@@ -40,7 +40,7 @@ class Ticks:
         """
         contract = ibi.Stock(self.symbol, "SMART", "USD")
 
-        # start the ticker stream and events. tkr is a throw away here.
+        # start the ticker stream and events. The variable, tkr,  is a throw away here.
         tkr = self.ib.reqMktData(contract, snapshot=False)
         # logger.debug(f"type of tkr is {type(tkr)}")
         async for tickers in self.ib.pendingTickersEvent:

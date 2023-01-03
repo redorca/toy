@@ -26,7 +26,7 @@ import ib_insync
 # size(?) vals: -1=unknown, 0=not halted, 1=general halt, 2=volatility halt
 
 
-class Candle:
+class Candle():
     def __init__(
         self,
         symbol: str,
