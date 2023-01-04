@@ -52,7 +52,7 @@ async def create(ib):
         """
         task_set.add(
             asyncio.create_task(
-                compose(tick_src, candle_maker, ema_calculator), name=symbol
+                compose(tick_src, candle_maker, ema_calculator, ib), name=symbol
             )
         )
     # print('in main')
@@ -63,11 +63,13 @@ async def compose(
     tick_src: ticks.Ticks,
     candle_maker: candles.CandleMakerBase,
     ema_calculator: emacalc.EmaCalculator,
+    ib,
 ):
     """this connects the blocks from create"""
     last_volume = 0
     volume_initialized = False
     largest_size = 0
+    tick_src.ib.reqMktData(tick_src.contract, snapshot=False)
     while True:
         """
                 Run a loop for each stock/security a Tick() object represents:
@@ -118,6 +120,9 @@ async def kreate(ib, *Symbols):
     for symbol in Symbols:
         logger.debug(f"set tick {symbol}")
         tick_src = ticks.Ticks(ib, symbol)
+        '''
+        tkr = reqMktData(ib.contract, snapshot=False)
+        '''
 
     task = asyncio.create_task(kompose(tick_src))
     results = await asyncio.gather(task)
@@ -138,8 +143,8 @@ async def main(gateway):
     ib = await connection.connect_async()
     logger.debug(f"connection took {time.perf_counter() - start} seconds")
     # asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
-    # await create(ib)
-    await kreate(ib,*Securities)
+    await create(ib)
+    # await kreate(ib,*Securities)
 
 
 if __name__ == "__main__":

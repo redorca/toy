@@ -28,6 +28,7 @@ class Ticks:
     """
 
     def __init__(self, ib_conn, symbol: str):
+        self.contract = None
         self.last_volume = 0
         self.volume_initialized = True
         self.largest_size = 0
@@ -35,16 +36,17 @@ class Ticks:
         self.symbol = symbol
         self.queued_tickers = deque(maxlen=32)  # not dequeue, but double ended queue
         self.latest_volume = -1
+        self.contract = ibi.Stock(self.symbol, "SMART", "USD")
 
     async def run_a(self):
         # logger.debug(f"starting {__name__}.run_a")
         """
             Iniitiate contact with IB and establish a data stream for a particular subscription.
         """
-        contract = ibi.Stock(self.symbol, "SMART", "USD")
+        ## contract = ibi.Stock(self.symbol, "SMART", "USD")
 
         # start the ticker stream and events. The variable, tkr,  is a throw away here.
-        tkr = self.ib.reqMktData(contract, snapshot=False)
+        tkr = self.ib.reqMktData(self.contract, snapshot=False)
         # logger.debug(f"type of tkr is {type(tkr)}")
         # logger.debug(f"run_a for {self.symbol}")
         async for tickers in self.ib.pendingTickersEvent:
@@ -105,6 +107,8 @@ class Ticks:
         """
             Run only the pendingTickersEvent monitor
         """
+        # start the ticker stream and events. The variable, tkr,  is a throw away here.
+        tkr = self.ib.reqMktData(contract, snapshot=False)
         async for tickers in self.ib.pendingTickersEvent:
             logger.debug(f"tickers:")
             for ticker in tickers:
