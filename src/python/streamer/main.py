@@ -28,19 +28,16 @@ from streamer import davelogging as dl
 logger = dl.logger(__name__, dl.DEBUG, dl.logformat)
 # logger.debug(f"__name__ is {__name__}")  # package name: streamer.davelogging
 # logger.debug(f"__file__ is {__file__}")  # file: /whole/path/to/davelogging.py
-Securities = [ "AAPL", "TSLA", "RSP",] 
+Securities = [ "AAPL", "TSLA", "RSP", "MSFT",] 
 
-async def create(ib):
+async def create(ib, *Symbols):
     # this is where we add processing block (Arun's block diagram)
     # first make objects
 
     task_set = set()
     dollar_volume = defaultdict(lambda: 100000, {"RSP": 50000})
-    for symbol in (
-        "TSLA",
-        "AAPL",
-        "RSP",
-    ):  #
+    for symbol in Symbols:
+        #
         # connection_info["symbol"] = symbol
         # make the processing objects
         tick_src = ticks.Ticks(ib, symbol)
@@ -69,7 +66,6 @@ async def compose(
     last_volume = 0
     volume_initialized = False
     largest_size = 0
-    ## tickr = tick_src.ib.reqMktData(tick_src.contract, snapshot=False)
     while True:
         """
                 Run a loop for each stock/security a Tick() object represents:
@@ -117,24 +113,68 @@ async def kreate(ib, *Symbols):
     # this is where we add processing block (Arun's block diagram)
     # first make objects
 
+    ticks_set = set()
+    logger.debug(f"running through symbols")
     for symbol in Symbols:
         logger.debug(f"set tick {symbol}")
         tick_src = ticks.Ticks(ib, symbol)
+        ticks_set.add(tick_src)
         '''
-        tkr = reqMktData(ib.contract, snapshot=False)
+        tkr = ib.reqMktData(ib.contract, snapshot=False)
         '''
 
-    task = asyncio.create_task(kompose(tick_src))
+    task = asyncio.create_task(kompose(ib, ticks_set))
+    if task is None:
+        logger.debug("No task created.")
     results = await asyncio.gather(task)
     return results
 
-async def kompose(tick_src):
+async def kompose(ibi, tickSet):
     while True:
         """
                 Run a loop for each stock/security a Tick() object represents:
         """
         logger.debug("A==a")
-        await tick_src.run_b()
+        for tick in tickSet:
+            logger.debug(f"requesting market data for {tick.contract.symbol}")
+            tkr = ibi.reqMktData(tick.contract, snapshot=False)
+
+        tkr = await ticks.run_b(ibi)
+
+        ############################################################
+        # quitting for the night, but
+        # this needs to migrate into candles that ignore the lastSize
+        # and instead follow the volume indicator
+        # discovered that redundant ticks of small size are emitted,
+        # and there are missing ticks where the volume jumps.
+        # need to decide how to handle prices.
+        # average of earlier and later tick?
+        #
+        logger.debug(
+            f"{tkr.contract.symbol}"
+            f" ${tkr.last:0.2f}"
+            f" sz:{tkr.lastSize}"
+            f" vol:{tkr.volume}"
+        )
+        largest_size = max(largest_size, tkr.lastSize)
+        # logger.debug(f"largest transaction size seen so far: {largest_size}")
+        if volume_initialized and (tkr.volume - tkr.lastSize - last_volume > 10.0):
+            logger.error(
+                "========== BIG JUMP ==============> "
+                f"{tkr.contract.symbol}"
+                f" new vol: {tkr.volume} != sum: {tkr.lastSize + last_volume}"
+                f" difference: {tkr.volume - last_volume - tkr.lastSize}"
+            )
+        last_volume = tkr.volume
+        volume_initialized = True
+        candle = await candle_maker.run_a(tick)  # will filter them down to candles
+        if candle is None:
+            continue
+        logger.info(f"=======  CANDLE  =========> {candle}")
+        ema = await ema_calculator.run_a(candle)  # incomplete
+        if ema is None:
+            continue
+        # print(ema)
 
 
 async def main(gateway):
@@ -143,8 +183,8 @@ async def main(gateway):
     ib = await connection.connect_async()
     logger.debug(f"connection took {time.perf_counter() - start} seconds")
     # asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
-    await create(ib)
-    # await kreate(ib,*Securities)
+    await create(ib, *Securities)
+    ## await kreate(ib,*Securities)
 
 
 if __name__ == "__main__":
