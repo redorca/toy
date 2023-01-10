@@ -124,7 +124,6 @@ def dump_tick_types():
     list each tick code, name, and description
     '''
     for idx in range(0, len(tickTypes)):
-        # print(f'        {idx} : \"{[x for x in tickTypes[idx]]}\"')
         print(f'        {idx} : \"{tickTypes[idx][0]}\" \"{tickTypes[idx][1]}\"')
 
 if __name__ == "__main__":
