@@ -30,7 +30,7 @@ class Ticks:
     def __init__(self, ib_conn, symbol: str):
         self.contract = None
         self.last_volume = 0
-        self.volume_initialized = True
+        self.volume_initialized = False
         self.largest_size = 0
         self.ib = ib_conn
         self.symbol = symbol
@@ -89,9 +89,9 @@ class Ticks:
                     await asyncio.sleep(0)  # printing and scrolling is slow
                     # logger.debug(
                     #     f"{self.symbol}"
-                    #     #     f":${ticker.last}"
-                    #     #     f" sz:{ticker.lastSize}"
-                    #     #     f" vol:{ticker.volume}"
+                    #     #     f":${ticker_.last}"
+                    #     #     f" sz:{ticker_.lastSize}"
+                    #     #     f" vol:{ticker_.volume}"
                     #     f"  {len(self.queued_tickers)} tickers in queue"
                     # )
                     return ticker_
@@ -149,13 +149,10 @@ class Ticks:
 
 async def run_b(ib):
     """"
-            Run only the pendingTickersEvent monitor
+        Run only the pendingTickersEvent monitor
         # start the ticker stream and events. The variable, tkr,  is a throw away here.
         for contract, symbol in zip(contracts, symbols):
-            tkr = self.ib.reqMktData(contract, snapshot=False)
     """
-    queued_tickers = deque(maxlen=32)  # not dequeue, but double ended queue
-    latest_volume = 0
     async for tickers in ib.pendingTickersEvent:
         logger.debug(f"tickers:")
         for ticker in tickers:
@@ -165,16 +162,16 @@ async def run_b(ib):
             # each Ticks object will see all subscriptions
             # first check for redundant ticks
             if (  # valid ticker data checks
-                    ticker.volume > latest_volume
+                    ticker.volume > ticker.latest_volume
                     and not np.isnan(ticker.volume)
                     and ticker.bidSize > 0
                     # and ticker.askSize > 0  # apparently redundant to bidSize
                     and not np.isnan(ticker.halted)
                     and ticker.halted < 0.5
             ):
-                latest_volume = ticker.volume
-                queued_tickers.append(ticker)
-                q_len = len(queued_tickers)
+                ticker.latest_volume = ticker.volume
+                ticker.queued_tickers.append(ticker)
+                q_len = len(ticker.queued_tickers)
                 if q_len > 10:
                     logger.debug(
                         f"queued {ticker.contract.symbol}," f" queue len: {q_len}"
@@ -187,26 +184,19 @@ async def run_b(ib):
 
             # can only return once per call, so we can get backed up
             # use "bad" ticker events to help drain the queue
-            if len(queued_tickers) > 0:
+            if len(ticker.queued_tickers) > 0:
                 """
-                        If this particular ticker stream (subscription) actually contains
-                        ticks then pop the oldest from the queue and return it.
-                    """
-                ticker_ = queued_tickers.popleft()
+                    If this particular ticker stream (subscription) actually contains
+                    ticks then pop the oldest from the queue and return it.
+                """
+                ticker_ = ticker.queued_tickers.popleft()
                 await asyncio.sleep(0)  # printing and scrolling is slow
-                # logger.debug(
-                #     f"{self.symbol}"
-                #     #     f":${ticker.last}"
-                #     #     f" sz:{ticker.lastSize}"
-                #     #     f" vol:{ticker.volume}"
-                #     f"  {len(self.queued_tickers)} tickers in queue"
-                # )
-                # return ticker_
+                return ticker_
             else:
                 """
-                        The queue hasn't any elements so return None.
-                        Async calls always return some value else async gather won't finish.
-                    """
+                    The queue hasn't any elements so return None.
+                    Async calls always return some value else async gather won't finish.
+                """
                 # return None
                 logger.debug(f"queue is 0")
 

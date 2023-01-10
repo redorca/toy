@@ -29,6 +29,8 @@ logger = dl.logger(__name__, dl.DEBUG, dl.logformat)
 # logger.debug(f"__name__ is {__name__}")  # package name: streamer.davelogging
 # logger.debug(f"__file__ is {__file__}")  # file: /whole/path/to/davelogging.py
 Securities = [ "AAPL", "TSLA", "RSP", "MSFT",] 
+symTicks = dict()
+
 
 async def create(ib, *Symbols):
     # this is where we add processing block (Arun's block diagram)
@@ -56,6 +58,7 @@ async def create(ib, *Symbols):
     results = await asyncio.gather(*task_set)
     return results
 
+
 async def compose(
     tick_src: ticks.Ticks,
     candle_maker: candles.CandleMakerBase,
@@ -70,8 +73,8 @@ async def compose(
         """
                 Run a loop for each stock/security a Tick() object represents:
         """
-        tick = await tick_src.run_a()  # should keep emitting ticks
-        if tick is None:
+        tickr = await tick_src.run_a()  # should keep emitting ticks
+        if tickr is None:
             continue
 
         ############################################################
@@ -84,23 +87,23 @@ async def compose(
         # average of earlier and later tick?
         #
         logger.debug(
-            f"{tick.contract.symbol}"
-            f" ${tick.last:0.2f}"
-            f" sz:{tick.lastSize}"
-            f" vol:{tick.volume}"
+            f"{tickr.contract.symbol}"
+            f" ${tickr.last:0.2f}"
+            f" sz:{tickr.lastSize}"
+            f" vol:{tickr.volume}"
         )
         largest_size = max(largest_size, tick.lastSize)
         # logger.debug(f"largest transaction size seen so far: {largest_size}")
-        if volume_initialized and (tick.volume - tick.lastSize - last_volume > 10.0):
+        if volume_initialized and (tickr.volume - tickr.lastSize - last_volume > 10.0):
             logger.error(
                 "========== BIG JUMP ==============> "
-                f"{tick.contract.symbol}"
-                f" new vol: {tick.volume} != sum: {tick.lastSize + last_volume}"
-                f" difference: {tick.volume - last_volume - tick.lastSize}"
+                f"{tickr.contract.symbol}"
+                f" new vol: {tickr.volume} != sum: {tickr.lastSize + last_volume}"
+                f" difference: {tickr.volume - last_volume - tickr.lastSize}"
             )
-        last_volume = tick.volume
+        last_volume = tickr.volume
         volume_initialized = True
-        candle = await candle_maker.run_a(tick)  # will filter them down to candles
+        candle = await candle_maker.run_a(tickr)  # will filter them down to candles
         if candle is None:
             continue
         logger.info(f"=======  CANDLE  =========> {candle}")
@@ -108,6 +111,7 @@ async def compose(
         if ema is None:
             continue
         # print(ema)
+
 
 async def kreate(ib, *Symbols):
     # this is where we add processing block (Arun's block diagram)
@@ -118,6 +122,7 @@ async def kreate(ib, *Symbols):
     for symbol in Symbols:
         logger.debug(f"set tick {symbol}")
         tick_src = ticks.Ticks(ib, symbol)
+        sim_ticks[symbol] = tick_src
         ticks_set.add(tick_src)
         '''
         tkr = ib.reqMktData(ib.contract, snapshot=False)
@@ -129,6 +134,7 @@ async def kreate(ib, *Symbols):
     results = await asyncio.gather(task)
     return results
 
+
 async def kompose(ibi, tickSet):
     while True:
         """
@@ -137,9 +143,10 @@ async def kompose(ibi, tickSet):
         logger.debug("A==a")
         for tick in tickSet:
             logger.debug(f"requesting market data for {tick.contract.symbol}")
-            tkr = ibi.reqMktData(tick.contract, snapshot=False)
+            ibi.reqMktData(tick.contract, snapshot=False)
 
         tkr = await ticks.run_b(ibi)
+        localTick = symTick[tkr.contract.symbol]
 
         ############################################################
         # quitting for the night, but
@@ -156,25 +163,25 @@ async def kompose(ibi, tickSet):
             f" sz:{tkr.lastSize}"
             f" vol:{tkr.volume}"
         )
-        largest_size = max(largest_size, tkr.lastSize)
+        localTick.largest_size = max(localTick.largest_size, tkr.lastSize)
         # logger.debug(f"largest transaction size seen so far: {largest_size}")
-        if volume_initialized and (tkr.volume - tkr.lastSize - last_volume > 10.0):
+        if localTick.volume_initialized     \
+           and (tkr.volume - tkr.lastSize - localTick.last_volume > 10.0):
             logger.error(
                 "========== BIG JUMP ==============> "
                 f"{tkr.contract.symbol}"
                 f" new vol: {tkr.volume} != sum: {tkr.lastSize + last_volume}"
                 f" difference: {tkr.volume - last_volume - tkr.lastSize}"
             )
-        last_volume = tkr.volume
-        volume_initialized = True
-        candle = await candle_maker.run_a(tick)  # will filter them down to candles
+        localTick.last_volume = tkr.volume
+        localTick.volume_initialized = True
+        candle = await candle_maker.run_a(tkr)  # will filter them down to candles
         if candle is None:
             continue
         logger.info(f"=======  CANDLE  =========> {candle}")
         ema = await ema_calculator.run_a(candle)  # incomplete
         if ema is None:
             continue
-        # print(ema)
 
 
 async def main(gateway):
