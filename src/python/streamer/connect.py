@@ -120,13 +120,14 @@ class Connection:
         return self.ib
 
     def close(self):
-        if ib.isConnected():
+        if self.ib.isConnected():
             self.ib.disconnect()
 
 
 if __name__ == "__main__":
     conn = Connection(Btcjopaper())
     ib = conn.connect()
+    print("connected")
 
-    print("done")
-    ib.disconnect()
+    conn.close()
+    print("disconnected")
