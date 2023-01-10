@@ -92,7 +92,7 @@ async def compose(
             f" sz:{tickr.lastSize}"
             f" vol:{tickr.volume}"
         )
-        largest_size = max(largest_size, tick.lastSize)
+        largest_size = max(largest_size, tickr.lastSize)
         # logger.debug(f"largest transaction size seen so far: {largest_size}")
         if volume_initialized and (tickr.volume - tickr.lastSize - last_volume > 10.0):
             logger.error(
@@ -122,8 +122,9 @@ async def kreate(ib, *Symbols):
     for symbol in Symbols:
         logger.debug(f"set tick {symbol}")
         tick_src = ticks.Ticks(ib, symbol)
-        sim_ticks[symbol] = tick_src
+        symTicks[symbol] = tick_src
         ticks_set.add(tick_src)
+        ib.reqMktData(tick_src.contract, snapshot=False)
         '''
         tkr = ib.reqMktData(ib.contract, snapshot=False)
         '''
@@ -140,13 +141,11 @@ async def kompose(ibi, tickSet):
         """
                 Run a loop for each stock/security a Tick() object represents:
         """
-        logger.debug("A==a")
-        for tick in tickSet:
-            logger.debug(f"requesting market data for {tick.contract.symbol}")
-            ibi.reqMktData(tick.contract, snapshot=False)
+        tkr = await ticks.run_b(ibi, symTicks)
+        if tkr is None:
+            continue
 
-        tkr = await ticks.run_b(ibi)
-        localTick = symTick[tkr.contract.symbol]
+        localTick = symTicks[tkr.contract.symbol]
 
         ############################################################
         # quitting for the night, but
@@ -175,6 +174,9 @@ async def kompose(ibi, tickSet):
             )
         localTick.last_volume = tkr.volume
         localTick.volume_initialized = True
+        continue
+        candle_maker = candles.CandleMakerDollarVolume(dollar_volume[localTick.contract.symbol])
+        ema_calculator = emacalc.EmaCalculator()
         candle = await candle_maker.run_a(tkr)  # will filter them down to candles
         if candle is None:
             continue
@@ -190,8 +192,8 @@ async def main(gateway):
     ib = await connection.connect_async()
     logger.debug(f"connection took {time.perf_counter() - start} seconds")
     # asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
-    await create(ib, *Securities)
-    ## await kreate(ib,*Securities)
+    ## await create(ib, *Securities)
+    await kreate(ib,*Securities)
 
 
 if __name__ == "__main__":
