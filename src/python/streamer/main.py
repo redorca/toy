@@ -169,8 +169,8 @@ async def kompose(ibi, tickSet):
             logger.error(
                 "========== BIG JUMP ==============> "
                 f"{tkr.contract.symbol}"
-                f" new vol: {tkr.volume} != sum: {tkr.lastSize + last_volume}"
-                f" difference: {tkr.volume - last_volume - tkr.lastSize}"
+                f" new vol: {tkr.volume} != sum: {tkr.lastSize + localTick.last_volume}"
+                f" difference: {tkr.volume - localTick.last_volume - tkr.lastSize}"
             )
         localTick.last_volume = tkr.volume
         localTick.volume_initialized = True
@@ -192,8 +192,8 @@ async def main(gateway):
     ib = await connection.connect_async()
     logger.debug(f"connection took {time.perf_counter() - start} seconds")
     # asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
-    ## await create(ib, *Securities)
-    await kreate(ib,*Securities)
+    await create(ib, *Securities)
+    ## await kreate(ib,*Securities)
 
 
 if __name__ == "__main__":
