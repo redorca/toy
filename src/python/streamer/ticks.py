@@ -65,7 +65,6 @@ class Ticks:
                         and not np.isnan(ticker.halted)
                         and ticker.halted < 0.5
                 ):
-                    logger.debug(f"symbol {ticker.contract.symbol}, not isnan ticker.volume {np.isnan(ticker.volume)},\n\tbidsize {ticker.bidSize},\n\tnot isnan ticker.halted {np.isnan(ticker.halted)}, halted {ticker.halted} < 0.5")
                     self.latest_volume = ticker.volume
                     self.queued_tickers.append(ticker)
                     q_len = len(self.queued_tickers)
@@ -155,7 +154,6 @@ async def run_b(ib, sym_ticks):
         for contract, symbol in zip(contracts, symbols):
     """
     async for tickers in ib.pendingTickersEvent:
-        logger.debug(f"tickers:")
         for ticker in tickers:
             _tick = sym_ticks[ticker.contract.symbol]
             await asyncio.sleep(0)
