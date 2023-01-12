@@ -119,24 +119,31 @@ async def kreate(ib, *Symbols):
 
     ticks_set = set()
     logger.debug(f"running through symbols")
+    dollar_volume = defaultdict(lambda: 100000, {"RSP": 50000})
     for symbol in Symbols:
         logger.debug(f"set tick {symbol}")
         tick_src = ticks.Ticks(ib, symbol)
         symTicks[symbol] = tick_src
         ticks_set.add(tick_src)
         ib.reqMktData(tick_src.contract, snapshot=False)
+        candle_maker = candles.CandleMakerDollarVolume(dollar_volume[symbol])
+        ema_calculator = emacalc.EmaCalculator()
         '''
         tkr = ib.reqMktData(ib.contract, snapshot=False)
         '''
 
-    task = asyncio.create_task(kompose(ib, ticks_set))
+    task = asyncio.create_task(kompose(ticks_set, candle_maker, ema_calculator, ib))
     if task is None:
         logger.debug("No task created.")
     results = await asyncio.gather(task)
     return results
 
 
-async def kompose(ibi, tickSet):
+async def kompose(tickSet,
+                  candle_maker: candles.CandleMakerBase,
+                  ema_calculator: emacalc.EmaCalculator,
+                  ibi,
+                  ):
     while True:
         """
                 Run a loop for each stock/security a Tick() object represents:
@@ -174,11 +181,10 @@ async def kompose(ibi, tickSet):
             )
         localTick.last_volume = tkr.volume
         localTick.volume_initialized = True
-        continue
-        candle_maker = candles.CandleMakerDollarVolume(dollar_volume[localTick.contract.symbol])
-        ema_calculator = emacalc.EmaCalculator()
+ 
         candle = await candle_maker.run_a(tkr)  # will filter them down to candles
         if candle is None:
+            logger.debug(f"no candle")
             continue
         logger.info(f"=======  CANDLE  =========> {candle}")
         ema = await ema_calculator.run_a(candle)  # incomplete
@@ -192,8 +198,8 @@ async def main(gateway):
     ib = await connection.connect_async()
     logger.debug(f"connection took {time.perf_counter() - start} seconds")
     # asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
-    await create(ib, *Securities)
-    ## await kreate(ib,*Securities)
+    ## await create(ib, *Securities)
+    await kreate(ib,*Securities)
 
 
 if __name__ == "__main__":
