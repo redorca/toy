@@ -87,7 +87,7 @@ async def compose(
         # average of earlier and later tick?
         #
         logger.debug(
-            f"{tickr.contract.symbol}"
+            f"(){tickr.contract.symbol}"
             f" ${tickr.last:0.2f}"
             f" sz:{tickr.lastSize}"
             f" vol:{tickr.volume}"
@@ -164,7 +164,7 @@ async def kompose(tickSet,
         # average of earlier and later tick?
         #
         logger.debug(
-            f"{tkr.contract.symbol}"
+            f"[]{tkr.contract.symbol}"
             f" ${tkr.last:0.2f}"
             f" sz:{tkr.lastSize}"
             f" vol:{tkr.volume}"
@@ -184,7 +184,6 @@ async def kompose(tickSet,
  
         candle = await candle_maker.run_a(tkr)  # will filter them down to candles
         if candle is None:
-            logger.debug(f"no candle")
             continue
         logger.info(f"=======  CANDLE  =========> {candle}")
         ema = await ema_calculator.run_a(candle)  # incomplete
@@ -193,10 +192,16 @@ async def kompose(tickSet,
 
 
 async def main(gateway):
-    connection = connect.Connection(gateway)
-    start = time.perf_counter()
-    ib = await connection.connect_async()
-    logger.debug(f"connection took {time.perf_counter() - start} seconds")
+    try:
+        connection = connect.Connection(gateway)
+        start = time.perf_counter()
+        ib = await connection.connect_async()
+        logger.debug(f"connection took {time.perf_counter() - start} seconds")
+    except (TimeoutError,
+            ConnectionError) as err:
+        print(f"Exception: {err.errno}, {err.strerror}")
+        exit()
+
     # asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
     ## await create(ib, *Securities)
     await kreate(ib,*Securities)
