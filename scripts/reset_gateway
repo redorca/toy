@@ -1,0 +1,27 @@
+#!/bin/bash
+
+VNC_CMDFILE="run_vnc"
+
+# Set a default vnc viewer if not already set in the environment
+ERRMSG_0="No CONNECTION specified."
+ERRMSG_1="No vnc host specified."
+VIEWER=${VNCVIEWER:=xtigervncviewer}
+GATEWAY=${CONNECTION:-$ERRMSG_0}
+HOST=${TARGET:?$ERRMSG_1}
+
+build_vnc_cmd()
+{
+cat  > $VNC_CMDFILE << EOF
+#!/bin/bash
+CMD_VNC="$VIEWER $HOST"
+
+sleep 5
+\$CMD_VNC > /dev/null 2>&1
+EOF
+chmod +x $VNC_CMDFILE
+}
+
+build_vnc_cmd
+setsid $VNC_CMDFILE >/dev/null 2>&1 &
+eval $GATEWAY
+
