@@ -87,7 +87,7 @@ async def compose(
         # average of earlier and later tick?
         #
         logger.debug(
-            f"(){tickr.contract.symbol}"
+            f"{tickr.contract.symbol}"
             f" ${tickr.last:0.2f}"
             f" sz:{tickr.lastSize}"
             f" vol:{tickr.volume}"
@@ -144,11 +144,14 @@ async def kompose(tickSet,
                   ema_calculator: emacalc.EmaCalculator,
                   ibi,
                   ):
+    return
+
     while True:
         """
                 Run a loop for each stock/security a Tick() object represents:
         """
-        tkr = await ticks.run_b(ibi, symTicks)
+        ## fObj = open("/tmp/foo.pkl", "ab+")
+        tkr = await ticks.run_b(ibi, symTicks, fileObj=None)
         if tkr is None:
             continue
 
@@ -164,7 +167,7 @@ async def kompose(tickSet,
         # average of earlier and later tick?
         #
         logger.debug(
-            f"[]{tkr.contract.symbol}"
+            f"{tkr.contract.symbol}"
             f" ${tkr.last:0.2f}"
             f" sz:{tkr.lastSize}"
             f" vol:{tkr.volume}"
