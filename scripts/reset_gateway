@@ -1,5 +1,28 @@
 #!/bin/bash
 
+##############################################################################
+#                                                                            #
+#     Combining the ssh connection and pass through for a vnc viewer         #
+#     with the launch of a vnc viewer.                                       #
+#                                                                            #
+#     Three environment variables are required but one of them has a         #
+#     value:                                                                 #
+#                                                                            #
+#         VNCVIEWER   The vnc viewer program. Defaults to xtigervncviewer    #
+#         CONNECTION  The ssh command used to reach the gateway machine      #
+#         TARGET      The machine hosting the ssh proxy                      #
+#                                                                            #
+#                                                                            #
+#    Since the viewer depends upon a running CONNECTION a shell script       #
+#    is crafted inline with this script which waits a few seconds before     #
+#    launching the viewer. This wait runs in the background and does not     #
+#    block this script.                                                      #
+#                                                                            #
+#    Then the script runs the CONNECTION command establishin the ssh proxy   #
+#    the viewer will use before th viewer tris to use it.                    #
+#                                                                            #
+##############################################################################
+
 VNC_CMDFILE="run_vnc"
 
 # Set a default vnc viewer if not already set in the environment
@@ -21,7 +44,14 @@ EOF
 chmod +x $VNC_CMDFILE
 }
 
+# Write a script out to a file
 build_vnc_cmd
+
+# run the script in its own procss group disconnected
+# from any stdout/stdin/stderr file descriptors so it
+# wont block waiting for keyboard data.
 setsid $VNC_CMDFILE >/dev/null 2>&1 &
+
+# Establish the ssh tunnl to the gateway which opens a shell command line
 eval $GATEWAY
 
