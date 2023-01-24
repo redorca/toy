@@ -7,7 +7,7 @@ ERRMSG_0="No CONNECTION specified."
 ERRMSG_1="No vnc host specified."
 VIEWER=${VNCVIEWER:=xtigervncviewer}
 GATEWAY=${CONNECTION:-$ERRMSG_0}
-HOST=${TARGET:?$ERRMSG_1}
+HOST=${TARGET:-$ERRMSG_1}
 
 build_vnc_cmd()
 {
