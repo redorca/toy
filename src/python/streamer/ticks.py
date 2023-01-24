@@ -29,6 +29,7 @@ class Ticks:
 
     def __init__(self, ib_conn, symbol: str):
         self.contract = None
+        self.last_price = 0.0
         self.last_volume = 0
         self.volume_initialized = False
         self.largest_size = 0
@@ -37,6 +38,7 @@ class Ticks:
         self.queued_tickers = deque(maxlen=32)  # not dequeue, but double ended queue
         self.latest_volume = -1
         self.contract = ibi.Stock(self.symbol, "SMART", "USD")
+        self.timestamp = 0
 
     async def run_a(self):
         # logger.debug(f"starting {__name__}.run_a")

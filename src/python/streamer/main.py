@@ -28,7 +28,7 @@ from streamer import davelogging as dl
 logger = dl.logger(__name__, dl.DEBUG, dl.logformat)
 # logger.debug(f"__name__ is {__name__}")  # package name: streamer.davelogging
 # logger.debug(f"__file__ is {__file__}")  # file: /whole/path/to/davelogging.py
-Securities = [ "AAPL", "TSLA", "RSP", "MSFT",] 
+Securities = [ "AAPL", "TSLA", "RSP", "MSFT",]
 symTicks = dict()
 
 
@@ -120,12 +120,14 @@ async def kreate(ib, *Symbols):
     ticks_set = set()
     logger.debug(f"running through symbols")
     dollar_volume = defaultdict(lambda: 100000, {"RSP": 50000})
+    # Ask to add the rtTime field to the Ticker.
+    tickFields = "233"
     for symbol in Symbols:
         logger.debug(f"set tick {symbol}")
         tick_src = ticks.Ticks(ib, symbol)
         symTicks[symbol] = tick_src
         ticks_set.add(tick_src)
-        ib.reqMktData(tick_src.contract, snapshot=False)
+        ib.reqMktData(tick_src.contract,  snapshot=False, genericTickList=tickFields)
         candle_maker = candles.CandleMakerDollarVolume(dollar_volume[symbol])
         ema_calculator = emacalc.EmaCalculator()
         '''
@@ -144,14 +146,11 @@ async def kompose(tickSet,
                   ema_calculator: emacalc.EmaCalculator,
                   ibi,
                   ):
-    return
-
     while True:
         """
                 Run a loop for each stock/security a Tick() object represents:
         """
-        ## fObj = open("/tmp/foo.pkl", "ab+")
-        tkr = await ticks.run_b(ibi, symTicks, fileObj=None)
+        tkr = await ticks.run_b(ibi, symTicks)
         if tkr is None:
             continue
 
@@ -166,12 +165,20 @@ async def kompose(tickSet,
         # need to decide how to handle prices.
         # average of earlier and later tick?
         #
+        duplicate = ""
+        if localTick.last_price == tkr.last and localTick.last_volume == tkr.volume:
+            duplicate = " [Duplicate] "
+
         logger.debug(
+            f"{duplicate}"
             f"{tkr.contract.symbol}"
             f" ${tkr.last:0.2f}"
             f" sz:{tkr.lastSize}"
             f" vol:{tkr.volume}"
         )
+        if localTick.last_price == tkr.last and localTick.last_volume == tkr.volume:
+            continue
+
         localTick.largest_size = max(localTick.largest_size, tkr.lastSize)
         # logger.debug(f"largest transaction size seen so far: {largest_size}")
         if localTick.volume_initialized     \
@@ -182,9 +189,11 @@ async def kompose(tickSet,
                 f" new vol: {tkr.volume} != sum: {tkr.lastSize + localTick.last_volume}"
                 f" difference: {tkr.volume - localTick.last_volume - tkr.lastSize}"
             )
+
+        localTick.last_price  = tkr.last
         localTick.last_volume = tkr.volume
         localTick.volume_initialized = True
- 
+
         candle = await candle_maker.run_a(tkr)  # will filter them down to candles
         if candle is None:
             continue
