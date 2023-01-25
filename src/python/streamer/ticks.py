@@ -3,7 +3,6 @@ import asyncio
 import time
 from collections import deque
 from math import isclose
-import pickle
 
 # PyPI
 import ib_insync as ibi
@@ -150,18 +149,14 @@ class Ticks:
         self.ib.disconnect()
 
 
-async def run_b(ib, sym_ticks, fileObj=None):
+async def run_b(ib, sym_ticks):
     """"
         Run only the pendingTickersEvent monitor
         # start the ticker stream and events. The variable, tkr,  is a throw away here.
         for contract, symbol in zip(contracts, symbols):
     """
-    if not fileObj is None:
-        tickPickle = pickle.Pickler(fileObj)
     async for tickers in ib.pendingTickersEvent:
         for ticker in tickers:
-            if not fileObj is None:
-                tickPickle.dump(ticker)
             _tick = sym_ticks[ticker.contract.symbol]
             await asyncio.sleep(0)
             # logger.debug(ticker)
