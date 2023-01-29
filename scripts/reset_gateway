@@ -23,7 +23,7 @@
 #                                                                            #
 ##############################################################################
 
-VNC_CMDFILE="run_vnc"
+VNC_CMDFILE="/tmp/run_vnc"
 
 # Set a default vnc viewer if not already set in the environment
 ERRMSG_0="No CONNECTION specified."
@@ -34,14 +34,15 @@ HOST=${TARGET:-$ERRMSG_1}
 
 build_vnc_cmd()
 {
-cat  > $VNC_CMDFILE << EOF
+        rm -f $VNC_CMDFILE
+        cat  > $VNC_CMDFILE << EOF
 #!/bin/bash
 CMD_VNC="$VIEWER $HOST"
 
-sleep 5
-\$CMD_VNC > /dev/null 2>&1
+sleep 8
+setsid \$CMD_VNC > /dev/null 2>&1
 EOF
-chmod +x $VNC_CMDFILE
+        chmod +x $VNC_CMDFILE
 }
 
 # Write a script out to a file
@@ -50,8 +51,7 @@ build_vnc_cmd
 # run the script in its own procss group disconnected
 # from any stdout/stdin/stderr file descriptors so it
 # wont block waiting for keyboard data.
-setsid $VNC_CMDFILE >/dev/null 2>&1 &
-
+setsid $VNC_CMDFILE >/tmp/log.vnc 2>&1 &
 # Establish the ssh tunnl to the gateway which opens a shell command line
 eval $GATEWAY
 
