@@ -22,13 +22,13 @@ from math import isclose
 # local modules
 import time
 
+import transcend
 from streamer import connect, ticks, candles, emacalc
 from streamer import davelogging as dl
 
 logger = dl.logger(__name__, dl.DEBUG, dl.logformat)
 # logger.debug(f"__name__ is {__name__}")  # package name: streamer.davelogging
 # logger.debug(f"__file__ is {__file__}")  # file: /whole/path/to/davelogging.py
-Securities = [ "AAPL", "TSLA", "RSP", "MSFT",]
 symTicks = dict()
 
 
@@ -215,8 +215,10 @@ async def main(gateway):
         exit()
 
     # asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
-    ## await create(ib, *Securities)
-    await kreate(ib,*Securities)
+    ## await create(ib,*stocks['Securities'])
+    # options = transcend.bundles.Bundle(secType='OPT')
+    stocks = transcend.bundles.Bundle(secType='STK')
+    await kreate(ib, *stocks.list())
 
 
 if __name__ == "__main__":
