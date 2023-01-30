@@ -15,12 +15,12 @@ import ib_insync as ibi
 'FUND' = Mutual fund
 'CRYPTO' = Crypto currency
 '''
-options = dict()
-options['Securities'] = ['NVDA', 'AAPL', 'NFLX', 'MRNA', 'VKTX', 'TSLA','MDGL',
+options = list()
+options = ['NVDA', 'AAPL', 'NFLX', 'MRNA', 'VKTX', 'TSLA','MDGL',
                          'FUTU', 'AMZN', 'NOW', 'IWM', 'MDB', 'QQQ', 'FSLR',
                          'GOOGL', 'SNOW']
-stocks = dict()
-stocks['Securities'] = ['TSLA', 'MSFT', 'AAPL', 'INTC', 'GOOG', 'META', 'RIVN', 'LCID', 'ZM', 'TEAM', 'EBAY', 'QCOM', 'AVGO', 'ADBE', 'AMGN', 'AMAT', 'ISRG', 'PYPL', 'INTU', 'AMD', 'GILD', 'ADI', 'REGN']
+list = list()
+stocks = ['TSLA', 'MSFT', 'AAPL', 'INTC', 'GOOG', 'META', 'RIVN', 'LCID', 'ZM', 'TEAM', 'EBAY', 'QCOM', 'AVGO', 'ADBE', 'AMGN', 'AMAT', 'ISRG', 'PYPL', 'INTU', 'AMD', 'GILD', 'ADI', 'REGN']
 '''
     Map the security type name to a class object.
 '''
@@ -42,7 +42,7 @@ class Bundle():
         to be tracked, averaged, watched for triggering events
     '''
 
-    def __init__(self, secType="OPT", exchange="Nasdaq", currency="USD"):
+    def __init__(self, secType="OPT", exchange="", currency="USD"):
         '''
             Setup all of the info needed to create a contract for each Symbol.
             Each security requires a contract to bind that symbol to the data
@@ -64,6 +64,7 @@ class Bundle():
         '''
             Return the list of securities the bundle represents.
         '''
+        ## print(f"bundle[Securities] {self.bundle['Securities']}")
         return self.bundle['Securities']
 
     async def register(self, security):

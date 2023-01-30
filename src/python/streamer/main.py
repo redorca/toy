@@ -15,6 +15,7 @@
 import asyncio
 from collections import defaultdict
 from math import isclose
+import argparse as args
 
 # PyPI
 # import uvloop
@@ -113,7 +114,7 @@ async def compose(
         # print(ema)
 
 
-async def kreate(ib, *Symbols):
+async def kreate(ib, Symbols):
     # this is where we add processing block (Arun's block diagram)
     # first make objects
 
@@ -203,24 +204,44 @@ async def kompose(tickSet,
             continue
 
 
-async def main(gateway):
+async def main(gateway, secType):
     try:
         connection = connect.Connection(gateway)
         start = time.perf_counter()
         ib = await connection.connect_async()
         logger.debug(f"connection took {time.perf_counter() - start} seconds")
     except (TimeoutError,
+            asyncio.exceptions.TimeoutError,
             ConnectionError) as err:
-        print(f"Exception: {err.errno}, {err.strerror}")
-        exit()
+        print(f"Exception: {err}")
+        return
 
     # asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
     ## await create(ib,*stocks['Securities'])
     # options = transcend.bundles.Bundle(secType='OPT')
-    stocks = transcend.bundles.Bundle(secType='STK')
-    await kreate(ib, *stocks.list())
+    funds = transcend.bundles.Bundle(secType)
+    await kreate(ib, funds.list())
 
+HelP = dict()
+HelP['stocks'] = "Monitor stocks from the IB Gateway."
+HelP['options'] = "Monitor options from the IB Gateway."
+HelP['file'] = "Contains the list of securities to track."
 
 if __name__ == "__main__":
+    cmdParse = args.ArgumentParser('Roon')
+    cmdParse.add_argument('-S', '--stocks', help=HelP['stocks'], action='store_true', default=False)
+    cmdParse.add_argument('-O', '--options', help=HelP['options'], action='store_true', default=False)
+    cmdParse.add_argument('-F', '--file', help=HelP['file'], nargs=1, action='store')
+
+    cmdLine = cmdParse.parse_args()
+    if not cmdLine.stocks and not cmdLine.options:
+        print(f'One of --stock or --options must be specified.')
+        exit()
+
+    # One of stocks, options must be true.
+    secType = 'OPT'
+    if cmdLine.stocks:
+        secType = 'STK'
+
     gateway = connect.Btchfpaper()
-    asyncio.run(main(gateway), debug=False)
+    asyncio.run(main(gateway, secType), debug=False)
