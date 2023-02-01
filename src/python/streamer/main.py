@@ -243,7 +243,7 @@ if __name__ == "__main__":
     cmdParse = args.ArgumentParser('Roon')
     cmdParse.add_argument('-S', '--stocks', help=HelP['stocks'], action='store_true', default=False)
     cmdParse.add_argument('-O', '--options', help=HelP['options'], action='store_true', default=False)
-    cmdParse.add_argument('-F', '--file', help=HelP['file'], nargs=1, action='store')
+    cmdParse.add_argument('-F', '--file', help=HelP['file'], nargs=1, required=True, action='store')
 
     cmdLine = cmdParse.parse_args()
     if not cmdLine.stocks and not cmdLine.options:
