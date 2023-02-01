@@ -155,6 +155,7 @@ async def run_b(ib, sym_ticks):
         # start the ticker stream and events. The variable, tkr,  is a throw away here.
         for contract, symbol in zip(contracts, symbols):
     """
+
     async for tickers in ib.pendingTickersEvent:
         for ticker in tickers:
             _tick = sym_ticks[ticker.contract.symbol]

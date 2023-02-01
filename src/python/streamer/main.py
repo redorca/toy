@@ -16,6 +16,7 @@ import asyncio
 from collections import defaultdict
 from math import isclose
 import argparse as args
+import configparser as cfg
 
 # PyPI
 # import uvloop
@@ -147,12 +148,16 @@ async def kompose(tickSet,
                   ema_calculator: emacalc.EmaCalculator,
                   ibi,
                   ):
+    duplicate = 0
+    skipped = 0
     while True:
         """
                 Run a loop for each stock/security a Tick() object represents:
         """
+        ## logger.debug(f"= {duplicate}, {skipped}")
         tkr = await ticks.run_b(ibi, symTicks)
         if tkr is None:
+            skipped += 1
             continue
 
         localTick = symTicks[tkr.contract.symbol]
@@ -166,12 +171,11 @@ async def kompose(tickSet,
         # need to decide how to handle prices.
         # average of earlier and later tick?
         #
-        duplicate = ""
         if localTick.last_price == tkr.last and localTick.last_volume == tkr.volume:
-            duplicate = " [Duplicate] "
+            duplicate += 1
+            continue
 
         logger.debug(
-            f"{duplicate}"
             f"{tkr.contract.symbol}"
             f" ${tkr.last:0.2f}"
             f" sz:{tkr.lastSize}"
@@ -204,7 +208,7 @@ async def kompose(tickSet,
             continue
 
 
-async def main(gateway, secType):
+async def main(gateway, secType, ticksFile):
     try:
         connection = connect.Connection(gateway)
         start = time.perf_counter()
@@ -219,7 +223,15 @@ async def main(gateway, secType):
     # asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
     ## await create(ib,*stocks['Securities'])
     # options = transcend.bundles.Bundle(secType='OPT')
-    funds = transcend.bundles.Bundle(secType)
+    kfg = cfg.ConfigParser()
+    kfg.read(ticksFile)
+    ## kfg.read("/tmp/options")
+    ## fo = list(kfg["options"]["OPT"].split("\n"))
+    ## print(f' Options: {fo}')
+
+    ## funds = transcend.bundles.Bundle(ib, secType)
+    funds = transcend.bundles.Bundle(ib, list(kfg['options']['OPT'].split("\n"))[1:], secType)
+    await funds.connection_check()
     await kreate(ib, funds.list())
 
 HelP = dict()
@@ -244,4 +256,5 @@ if __name__ == "__main__":
         secType = 'STK'
 
     gateway = connect.Btchfpaper()
-    asyncio.run(main(gateway, secType), debug=False)
+    ticksFile = cmdLine.file
+    asyncio.run(main(gateway, secType, ticksFile), debug=False)

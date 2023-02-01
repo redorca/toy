@@ -1,4 +1,7 @@
 import ib_insync as ibi
+from streamer import davelogging as dl
+
+logger = dl.logger(__name__, dl.DEBUG, dl.logformat)
 '''
 'STK' = Stock (or ETF)
 'OPT' = Option
@@ -42,7 +45,7 @@ class Bundle():
         to be tracked, averaged, watched for triggering events
     '''
 
-    def __init__(self, secType="OPT", exchange="", currency="USD"):
+    def __init__(self, ib_conn, tickers, /, secType="OPT", exchange="", currency="USD"):
         '''
             Setup all of the info needed to create a contract for each Symbol.
             Each security requires a contract to bind that symbol to the data
@@ -57,8 +60,9 @@ class Bundle():
         self.bundle['Class'] = ContractClasses[secType]
         self.bundle['Exchange'] = exchange
         self.bundle['Currency'] = currency
-        self.bundle['Securities'] = securityTypeMap[secType]
-
+        ## self.bundle['Securities'] = securityTypeMap[secType]
+        self.bundle['Securities'] = tickers
+        self.ib = ib_conn
 
     def list(self):
         '''
@@ -77,6 +81,15 @@ class Bundle():
         await asyncio.sleep(0)
         return None
 
+    async def isConnected(self):
+        return self.ib.isConnected()
+
+    async def connection_check(self):
+        logger.debug("--")
+        if not self.ib.isConnected():
+            logger.debug("Not connected.")
+            raise ConnectionError("Connection closed")
+            return
 
     async def run(ib, sym_ticks):
         """"
