@@ -93,7 +93,7 @@ class Bundle():
     async def candle_for_tick(self, tick_):
         return self.candle_maker[tick_.symbol]
 
-    async def register(self):
+    async def register(self, symbols):
         '''
             Set the data flowing. Set the contract and return the Tick
         '''
@@ -102,7 +102,8 @@ class Bundle():
 
         # Add the rtTime field to the Ticker.
         tickFields = "233"
-        for symbol in self.bundle['Securities']:
+        ## for symbol in self.bundle['Securities']:
+        for symbol in symbols:
             logger.debug(f"set tick {symbol}")
             tick_src = ticks.Ticks(self.ib, symbol)
             self.sym_ticks[symbol] = tick_src

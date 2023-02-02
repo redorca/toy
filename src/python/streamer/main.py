@@ -38,7 +38,7 @@ async def create(ib, Symbols, bundler):
     # this is where we add processing block (Arun's block diagram)
     # first make objects
 
-    await bundler.register()
+    await bundler.register(Symbols)
     task = asyncio.create_task(compose(bundler, ib))
     if task is None:
         logger.debug("No task created.")
@@ -46,7 +46,7 @@ async def create(ib, Symbols, bundler):
     return results
 
 
-async def compose(Bundle, ibi,):
+async def compose(Bundle, ibi):
     duplicate = 0
     skipped = 0
     ema_calculator = emacalc.EmaCalculator()
@@ -97,10 +97,10 @@ async def compose(Bundle, ibi,):
         localTick.last_volume = tkr.volume
         localTick.volume_initialized = True
 
-        candle = await Bundle.candle_for_tick(localTick)
+        candle_maker = await Bundle.candle_for_tick(localTick)
+        candle = await candle_maker.run_a(tkr)
         if candle is None:
             continue
-        await candle.run_a(tkr)
         logger.info(f"=======  CANDLE  =========> {candle}")
         ema = await ema_calculator.run_a(candle)  # incomplete
         if ema is None:
