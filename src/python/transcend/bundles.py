@@ -10,8 +10,10 @@
 import asyncio
 import numpy as np
 import pandas as pd
+from collections import defaultdict
 
 import ib_insync as ibi
+from streamer import ticks, candles, emacalc
 from streamer import davelogging as dl
 
 logger = dl.logger(__name__, dl.DEBUG, dl.logformat)
@@ -76,6 +78,9 @@ class Bundle():
         ## self.bundle['Securities'] = securityTypeMap[secType]
         self.bundle['Securities'] = tickers
         self.ib = ib_conn
+        self.sym_ticks = dict()
+        self.candle_maker = dict()
+        self.ema_calculator = dict()
 
     def list(self):
         '''
@@ -84,26 +89,29 @@ class Bundle():
         ## print(f"bundle[Securities] {self.bundle['Securities']}")
         return self.bundle['Securities']
 
-    async def register(self, security):
+    async def tick_for_ticker(self, ticker):
+        return self.sym_ticks[ticker.contract.symbol]
+
+    async def candle_for_tick(self, tick_):
+        return self.candle_maker[tick_.symbol]
+
+    async def register(self):
         '''
             Set the data flowing. Set the contract and return the Tick
         '''
-        if not security in self.bundle['Securities']:
-            print(f'{security} is not represneted by this bundle.')
-
-        ticks_set = set()
+        ## ticks_set = set()
         logger.debug(f"running through symbols")
         dollar_volume = defaultdict(lambda: 100000, {"RSP": 50000})
+        self.ema_calculator = emacalc.EmaCalculator()
         # Ask to add the rtTime field to the Ticker.
         tickFields = "233"
-        for symbol in Symbols:
+        for symbol in self.bundle['Securities']:
             logger.debug(f"set tick {symbol}")
-            tick_src = ticks.Ticks(ib, symbol)
-            symTicks[symbol] = tick_src
-            ticks_set.add(tick_src)
+            tick_src = ticks.Ticks(self.ib, symbol)
+            self.sym_ticks[symbol] = tick_src
+            ## ticks_set.add(tick_src)
+            self.candle_maker[symbol] = candles.CandleMakerDollarVolume(dollar_volume[symbol])
             self.ib.reqMktData(tick_src.contract,  snapshot=False, genericTickList=tickFields)
-            candle_maker = candles.CandleMakerDollarVolume(dollar_volume[symbol])
-            ema_calculator = emacalc.EmaCalculator()
             '''
             tkr = ib.reqMktData(ib.contract, snapshot=False)
             '''
@@ -123,13 +131,13 @@ class Bundle():
                 return
             await asyncio.sleep(0)
 
-    async def run(self, ib, sym_ticks):
+    async def run(self):
         """"
             Monitor the data stream and process each tick.
         """
         async for tickers in ib.pendingTickersEvent:
             for ticker in tickers:
-                _tick = sym_ticks[ticker.contract.symbol]
+                _tick = self.sym_ticks[ticker.contract.symbol]
                 await asyncio.sleep(0)
                 # logger.debug(ticker)
                 # each Ticks object will see all subscriptions
@@ -165,7 +173,7 @@ class Bundle():
                     """
                     return None
 
-    async def run_b(self, sym_ticks):
+    async def run_b(self):
         """"
             Run only the pendingTickersEvent monitor
             # start the ticker stream and events. The variable, tkr,  is a throw away here.
@@ -174,7 +182,7 @@ class Bundle():
     
         async for tickers in self.ib.pendingTickersEvent:
             for ticker in tickers:
-                _tick = sym_ticks[ticker.contract.symbol]
+                _tick = self.sym_ticks[ticker.contract.symbol]
                 await asyncio.sleep(0)
                 # logger.debug(ticker)
                 # each Ticks object will see all subscriptions

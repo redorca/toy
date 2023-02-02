@@ -119,6 +119,7 @@ async def kreate(ib, Symbols, bundler):
     # this is where we add processing block (Arun's block diagram)
     # first make objects
 
+    '''
     ticks_set = set()
     logger.debug(f"running through symbols")
     dollar_volume = defaultdict(lambda: 100000, {"RSP": 50000})
@@ -133,23 +134,23 @@ async def kreate(ib, Symbols, bundler):
         ib.reqMktData(tick_src.contract,  snapshot=False, genericTickList=tickFields)
         candle_maker = candles.CandleMakerDollarVolume(dollar_volume[symbol])
         ema_calculator = emacalc.EmaCalculator()
-        '''
         tkr = ib.reqMktData(ib.contract, snapshot=False)
-        '''
-
-    task = asyncio.create_task(kompose(bundler, candle_maker, ema_calculator, ib))
+    '''
+    await bundler.register()
+    # task = asyncio.create_task(kompose(bundler, candle_maker, ema_calculator, ib))
+    task = asyncio.create_task(kompose(bundler, ib))
     if task is None:
         logger.debug("No task created.")
-    ## results = await asyncio.gather(task, bundler.connection_monitor)
     results = await asyncio.gather(task)
     return results
 
 
-async def kompose(Bundle,
-                  candle_maker: candles.CandleMakerBase,
-                  ema_calculator: emacalc.EmaCalculator,
-                  ibi,
-                  ):
+## async def kompose(Bundle,
+##                   candle_maker: candles.CandleMakerBase,
+##                   ema_calculator: emacalc.EmaCalculator,
+##                   ibi,
+##                   ):
+async def kompose(Bundle, ibi,):
     duplicate = 0
     skipped = 0
     while True:
@@ -157,13 +158,14 @@ async def kompose(Bundle,
                 Run a loop for each stock/security a Tick() object represents:
         """
         ## logger.debug(f"= {duplicate}, {skipped}")
-        tkr = await Bundle.run_b(symTicks)
-        tkr = await ticks.run_b(ibi, symTicks)
+        tkr = await Bundle.run_b()
+        ## tkr = await ticks.run_b(ibi, symTicks)
         if tkr is None:
             skipped += 1
             continue
 
-        localTick = symTicks[tkr.contract.symbol]
+        ## localTick = symTicks[tkr.contract.symbol]
+        localTick = await Bundle.tick_for_ticker(tkr)
 
         ############################################################
         # quitting for the night, but
@@ -202,9 +204,10 @@ async def kompose(Bundle,
         localTick.last_volume = tkr.volume
         localTick.volume_initialized = True
 
-        candle = await candle_maker.run_a(tkr)  # will filter them down to candles
+        candle = await Bundle.candle_for_tick(localTick)
         if candle is None:
             continue
+        await candle.candle_maker.run_a(tkr)
         logger.info(f"=======  CANDLE  =========> {candle}")
         ema = await ema_calculator.run_a(candle)  # incomplete
         if ema is None:
