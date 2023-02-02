@@ -75,7 +75,6 @@ class Bundle():
         self.bundle['Class'] = ContractClasses[secType]
         self.bundle['Exchange'] = exchange
         self.bundle['Currency'] = currency
-        ## self.bundle['Securities'] = securityTypeMap[secType]
         self.bundle['Securities'] = tickers
         self.ib = ib_conn
         self.sym_ticks = dict()
@@ -86,7 +85,6 @@ class Bundle():
         '''
             Return the list of securities the bundle represents.
         '''
-        ## print(f"bundle[Securities] {self.bundle['Securities']}")
         return self.bundle['Securities']
 
     async def tick_for_ticker(self, ticker):
@@ -99,27 +97,23 @@ class Bundle():
         '''
             Set the data flowing. Set the contract and return the Tick
         '''
-        ## ticks_set = set()
-        logger.debug(f"running through symbols")
         dollar_volume = defaultdict(lambda: 100000, {"RSP": 50000})
         self.ema_calculator = emacalc.EmaCalculator()
-        # Ask to add the rtTime field to the Ticker.
+
+        # Add the rtTime field to the Ticker.
         tickFields = "233"
         for symbol in self.bundle['Securities']:
             logger.debug(f"set tick {symbol}")
             tick_src = ticks.Ticks(self.ib, symbol)
             self.sym_ticks[symbol] = tick_src
-            ## ticks_set.add(tick_src)
             self.candle_maker[symbol] = candles.CandleMakerDollarVolume(dollar_volume[symbol])
             self.ib.reqMktData(tick_src.contract,  snapshot=False, genericTickList=tickFields)
-            '''
-            tkr = ib.reqMktData(ib.contract, snapshot=False)
-            '''
-    
             await asyncio.sleep(0)
-            return None
+
+        return None
 
     async def isConnected(self):
+        await asyncio.sleep(0)
         return self.ib.isConnected()
 
     async def connection_monitor(self):
@@ -135,51 +129,6 @@ class Bundle():
         """"
             Monitor the data stream and process each tick.
         """
-        async for tickers in ib.pendingTickersEvent:
-            for ticker in tickers:
-                _tick = self.sym_ticks[ticker.contract.symbol]
-                await asyncio.sleep(0)
-                # logger.debug(ticker)
-                # each Ticks object will see all subscriptions
-                # first check for redundant ticks
-                if (not np.isnan(ticker.volume) and not ticker.volume == 0):
-                    _tick.latest_volume = ticker.volume
-                    _tick.queued_tickers.append(ticker)
-                    q_len = len(_tick.queued_tickers)
-                    if q_len > 10:
-                        logger.debug(
-                            f"queued {ticker.contract.symbol}," f" queue len: {q_len}"
-                        )
-                # else:
-                #     logger.debug(
-                #         f"tossed non-matching ticker,"
-                #         f" queue len: {len(self.queued_tickers)}"
-                #     )
-    
-                # can only return once per call, so we can get backed up
-                # use "bad" ticker events to help drain the queue
-                if len(_tick.queued_tickers) > 0:
-                    """
-                        If this particular ticker stream (subscription) actually contains
-                        ticks then pop the oldest from the queue and return it.
-                    """
-                    ticker_ = _tick.queued_tickers.popleft()
-                    await asyncio.sleep(0)  # printing and scrolling is slow
-                    return ticker_
-                else:
-                    """
-                        The queue hasn't any elements so return None.
-                        Async calls always return some value else async gather won't finish.
-                    """
-                    return None
-
-    async def run_b(self):
-        """"
-            Run only the pendingTickersEvent monitor
-            # start the ticker stream and events. The variable, tkr,  is a throw away here.
-            for contract, symbol in zip(contracts, symbols):
-        """
-    
         async for tickers in self.ib.pendingTickersEvent:
             for ticker in tickers:
                 _tick = self.sym_ticks[ticker.contract.symbol]
@@ -200,7 +149,7 @@ class Bundle():
                 #         f"tossed non-matching ticker,"
                 #         f" queue len: {len(self.queued_tickers)}"
                 #     )
-    
+
                 # can only return once per call, so we can get backed up
                 # use "bad" ticker events to help drain the queue
                 if len(_tick.queued_tickers) > 0:

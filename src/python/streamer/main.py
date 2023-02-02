@@ -157,14 +157,11 @@ async def kompose(Bundle, ibi,):
         """
                 Run a loop for each stock/security a Tick() object represents:
         """
-        ## logger.debug(f"= {duplicate}, {skipped}")
-        tkr = await Bundle.run_b()
-        ## tkr = await ticks.run_b(ibi, symTicks)
+        tkr = await Bundle.run()
         if tkr is None:
             skipped += 1
             continue
 
-        ## localTick = symTicks[tkr.contract.symbol]
         localTick = await Bundle.tick_for_ticker(tkr)
 
         ############################################################
@@ -179,7 +176,7 @@ async def kompose(Bundle, ibi,):
         if localTick.last_price == tkr.last and localTick.last_volume == tkr.volume:
             duplicate += 1
             continue
-        logger.debug(f' rtTime: {tkr.rtTime}')
+
         logger.debug(
             f"{tkr.contract.symbol}"
             f" ${tkr.last:0.2f}"
@@ -227,15 +224,9 @@ async def main(gateway, secType, ticksFile):
         return
 
     # asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
-    ## await create(ib,*stocks['Securities'])
-    # options = transcend.bundles.Bundle(secType='OPT')
     kfg = cfg.ConfigParser()
     kfg.read(ticksFile)
-    ## kfg.read("/tmp/options")
-    ## fo = list(kfg["options"]["OPT"].split("\n"))
-    ## print(f' Options: {fo}')
 
-    ## funds = transcend.bundles.Bundle(ib, secType)
     if 'options' in kfg.sections():
         sec_type = 'OPT'
         section = 'options'
