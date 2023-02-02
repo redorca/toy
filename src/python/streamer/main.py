@@ -158,7 +158,7 @@ async def kompose(Bundle,
         """
         ## logger.debug(f"= {duplicate}, {skipped}")
         tkr = await Bundle.run_b(symTicks)
-        tkr = await ticks.run_b(ib, symTicks)
+        tkr = await ticks.run_b(ibi, symTicks)
         if tkr is None:
             skipped += 1
             continue
