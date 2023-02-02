@@ -34,123 +34,19 @@ logger = dl.logger(__name__, dl.DEBUG, dl.logformat)
 symTicks = dict()
 
 
-async def create(ib, *Symbols):
+async def create(ib, Symbols, bundler):
     # this is where we add processing block (Arun's block diagram)
     # first make objects
 
-    task_set = set()
-    dollar_volume = defaultdict(lambda: 100000, {"RSP": 50000})
-    for symbol in Symbols:
-        #
-        # connection_info["symbol"] = symbol
-        # make the processing objects
-        tick_src = ticks.Ticks(ib, symbol)
-        candle_maker = candles.CandleMakerDollarVolume(dollar_volume[symbol])
-        ema_calculator = emacalc.EmaCalculator()
-
-        """
-            Create a task per Tick() security, add it to a set for later obsrvation
-        """
-        task_set.add(
-            asyncio.create_task(
-                compose(tick_src, candle_maker, ema_calculator, ib), name=symbol
-            )
-        )
-    # print('in main')
-    results = await asyncio.gather(*task_set)
-    return results
-
-
-async def compose(
-    tick_src: ticks.Ticks,
-    candle_maker: candles.CandleMakerBase,
-    ema_calculator: emacalc.EmaCalculator,
-    ib,
-):
-    """this connects the blocks from create"""
-    last_volume = 0
-    volume_initialized = False
-    largest_size = 0
-    while True:
-        """
-                Run a loop for each stock/security a Tick() object represents:
-        """
-        tickr = await tick_src.run_a()  # should keep emitting ticks
-        if tickr is None:
-            continue
-
-        ############################################################
-        # quitting for the night, but
-        # this needs to migrate into candles that ignore the lastSize
-        # and instead follow the volume indicator
-        # discovered that redundant ticks of small size are emitted,
-        # and there are missing ticks where the volume jumps.
-        # need to decide how to handle prices.
-        # average of earlier and later tick?
-        #
-        logger.debug(
-            f"{tickr.contract.symbol}"
-            f" ${tickr.last:0.2f}"
-            f" sz:{tickr.lastSize}"
-            f" vol:{tickr.volume}"
-        )
-        largest_size = max(largest_size, tickr.lastSize)
-        # logger.debug(f"largest transaction size seen so far: {largest_size}")
-        if volume_initialized and (tickr.volume - tickr.lastSize - last_volume > 10.0):
-            logger.error(
-                "========== BIG JUMP ==============> "
-                f"{tickr.contract.symbol}"
-                f" new vol: {tickr.volume} != sum: {tickr.lastSize + last_volume}"
-                f" difference: {tickr.volume - last_volume - tickr.lastSize}"
-            )
-        last_volume = tickr.volume
-        volume_initialized = True
-        candle = await candle_maker.run_a(tickr)  # will filter them down to candles
-        if candle is None:
-            continue
-        logger.info(f"=======  CANDLE  =========> {candle}")
-        ema = await ema_calculator.run_a(candle)  # incomplete
-        if ema is None:
-            continue
-        # print(ema)
-
-
-async def kreate(ib, Symbols, bundler):
-    # this is where we add processing block (Arun's block diagram)
-    # first make objects
-
-    '''
-    ticks_set = set()
-    logger.debug(f"running through symbols")
-    dollar_volume = defaultdict(lambda: 100000, {"RSP": 50000})
-    # Ask to add the rtTime field to the Ticker.
-    tickFields = "233"
-    ## tickFields = "233, 100, 101, 104, 105, 106"
-    for symbol in Symbols:
-        logger.debug(f"set tick {symbol}")
-        tick_src = ticks.Ticks(ib, symbol)
-        symTicks[symbol] = tick_src
-        ticks_set.add(tick_src)
-        ib.reqMktData(tick_src.contract,  snapshot=False, genericTickList=tickFields)
-        candle_maker = candles.CandleMakerDollarVolume(dollar_volume[symbol])
-        ema_calculator = emacalc.EmaCalculator()
-        tkr = ib.reqMktData(ib.contract, snapshot=False)
-    '''
     await bundler.register()
-    # task = asyncio.create_task(kompose(bundler, candle_maker, ema_calculator, ib))
-    task = asyncio.create_task(kompose(bundler, ib))
+    task = asyncio.create_task(compose(bundler, ib))
     if task is None:
         logger.debug("No task created.")
     results = await asyncio.gather(task)
     return results
 
 
-## async def kompose(Bundle,
-##                   candle_maker: candles.CandleMakerBase,
-##                   ema_calculator: emacalc.EmaCalculator,
-##                   ibi,
-##                   ):
-async def kompose(Bundle, ibi,):
+async def compose(Bundle, ibi,):
     duplicate = 0
     skipped = 0
     while True:
@@ -187,7 +83,6 @@ async def kompose(Bundle, ibi,):
             continue
 
         localTick.largest_size = max(localTick.largest_size, tkr.lastSize)
-        # logger.debug(f"largest transaction size seen so far: {largest_size}")
         if localTick.volume_initialized     \
            and (tkr.volume - tkr.lastSize - localTick.last_volume > 10.0):
             logger.error(
@@ -223,7 +118,6 @@ async def main(gateway, secType, ticksFile):
         print(f"Exception: {err}")
         return
 
-    # asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
     kfg = cfg.ConfigParser()
     kfg.read(ticksFile)
 
@@ -239,7 +133,7 @@ async def main(gateway, secType, ticksFile):
 
     logger.debug(f'Security type: {sec_type}')
     funds = transcend.bundles.Bundle(ib, list(kfg[section][sec_type].split("\n"))[1:], secType=sec_type)
-    await kreate(ib, funds.list(), funds)
+    await create(ib, funds.list(), funds)
 
 HelP = dict()
 HelP['stocks'] = "Monitor stocks from the IB Gateway."
