@@ -1,3 +1,16 @@
+'''
+    Generalize ticker handling through the Bundle() class allowing
+    access to methods applicable to all tickers and leave ticker
+    specific methods to the class Ticks().
+
+    E.G. the run command applies to all tickers so it moves out of Ticks()
+    into Bundle().
+'''
+
+import asyncio
+import numpy as np
+import pandas as pd
+
 import ib_insync as ibi
 from streamer import davelogging as dl
 
@@ -78,24 +91,88 @@ class Bundle():
         if not security in self.bundle['Securities']:
             print(f'{security} is not represneted by this bundle.')
 
-        await asyncio.sleep(0)
-        return None
+        ticks_set = set()
+        logger.debug(f"running through symbols")
+        dollar_volume = defaultdict(lambda: 100000, {"RSP": 50000})
+        # Ask to add the rtTime field to the Ticker.
+        tickFields = "233"
+        for symbol in Symbols:
+            logger.debug(f"set tick {symbol}")
+            tick_src = ticks.Ticks(ib, symbol)
+            symTicks[symbol] = tick_src
+            ticks_set.add(tick_src)
+            self.ib.reqMktData(tick_src.contract,  snapshot=False, genericTickList=tickFields)
+            candle_maker = candles.CandleMakerDollarVolume(dollar_volume[symbol])
+            ema_calculator = emacalc.EmaCalculator()
+            '''
+            tkr = ib.reqMktData(ib.contract, snapshot=False)
+            '''
+    
+            await asyncio.sleep(0)
+            return None
 
     async def isConnected(self):
         return self.ib.isConnected()
 
-    async def connection_check(self):
+    async def connection_monitor(self):
         logger.debug("--")
-        if not self.ib.isConnected():
-            logger.debug("Not connected.")
-            raise ConnectionError("Connection closed")
-            return
+        while True:
+            if not self.ib.isConnected():
+                logger.debug("Not connected.")
+                raise ConnectionError("Connection closed")
+                return
+            await asyncio.sleep(0)
 
-    async def run(ib, sym_ticks):
+    async def run(self, ib, sym_ticks):
         """"
             Monitor the data stream and process each tick.
         """
         async for tickers in ib.pendingTickersEvent:
+            for ticker in tickers:
+                _tick = sym_ticks[ticker.contract.symbol]
+                await asyncio.sleep(0)
+                # logger.debug(ticker)
+                # each Ticks object will see all subscriptions
+                # first check for redundant ticks
+                if (not np.isnan(ticker.volume) and not ticker.volume == 0):
+                    _tick.latest_volume = ticker.volume
+                    _tick.queued_tickers.append(ticker)
+                    q_len = len(_tick.queued_tickers)
+                    if q_len > 10:
+                        logger.debug(
+                            f"queued {ticker.contract.symbol}," f" queue len: {q_len}"
+                        )
+                # else:
+                #     logger.debug(
+                #         f"tossed non-matching ticker,"
+                #         f" queue len: {len(self.queued_tickers)}"
+                #     )
+    
+                # can only return once per call, so we can get backed up
+                # use "bad" ticker events to help drain the queue
+                if len(_tick.queued_tickers) > 0:
+                    """
+                        If this particular ticker stream (subscription) actually contains
+                        ticks then pop the oldest from the queue and return it.
+                    """
+                    ticker_ = _tick.queued_tickers.popleft()
+                    await asyncio.sleep(0)  # printing and scrolling is slow
+                    return ticker_
+                else:
+                    """
+                        The queue hasn't any elements so return None.
+                        Async calls always return some value else async gather won't finish.
+                    """
+                    return None
+
+    async def run_b(self, sym_ticks):
+        """"
+            Run only the pendingTickersEvent monitor
+            # start the ticker stream and events. The variable, tkr,  is a throw away here.
+            for contract, symbol in zip(contracts, symbols):
+        """
+    
+        async for tickers in self.ib.pendingTickersEvent:
             for ticker in tickers:
                 _tick = sym_ticks[ticker.contract.symbol]
                 await asyncio.sleep(0)

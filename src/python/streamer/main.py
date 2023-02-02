@@ -123,8 +123,8 @@ async def kreate(ib, Symbols, bundler):
     logger.debug(f"running through symbols")
     dollar_volume = defaultdict(lambda: 100000, {"RSP": 50000})
     # Ask to add the rtTime field to the Ticker.
-    ## tickFields = "233"
-    tickFields = "233, 100, 101, 104, 105, 106"
+    tickFields = "233"
+    ## tickFields = "233, 100, 101, 104, 105, 106"
     for symbol in Symbols:
         logger.debug(f"set tick {symbol}")
         tick_src = ticks.Ticks(ib, symbol)
@@ -140,6 +140,7 @@ async def kreate(ib, Symbols, bundler):
     task = asyncio.create_task(kompose(bundler, candle_maker, ema_calculator, ib))
     if task is None:
         logger.debug("No task created.")
+    ## results = await asyncio.gather(task, bundler.connection_monitor)
     results = await asyncio.gather(task)
     return results
 
@@ -156,7 +157,8 @@ async def kompose(Bundle,
                 Run a loop for each stock/security a Tick() object represents:
         """
         ## logger.debug(f"= {duplicate}, {skipped}")
-        tkr = await ticks.run_b(ibi, symTicks)
+        tkr = await Bundle.run_b(symTicks)
+        tkr = await ticks.run_b(ib, symTicks)
         if tkr is None:
             skipped += 1
             continue
@@ -175,9 +177,8 @@ async def kompose(Bundle,
         if localTick.last_price == tkr.last and localTick.last_volume == tkr.volume:
             duplicate += 1
             continue
-
+        logger.debug(f' rtTime: {tkr.rtTime}')
         logger.debug(
-            f"[{tkr.rtTime}] ",
             f"{tkr.contract.symbol}"
             f" ${tkr.last:0.2f}"
             f" sz:{tkr.lastSize}"
@@ -233,17 +234,17 @@ async def main(gateway, secType, ticksFile):
 
     ## funds = transcend.bundles.Bundle(ib, secType)
     if 'options' in kfg.sections():
-        secType = 'OPT'
+        sec_type = 'OPT'
         section = 'options'
     elif 'stocks' in kfg.sections():
         section = 'stocks'
-        secType = 'STK'
+        sec_type = 'STK'
     else:
         logger.debug(f'unable to determine whether this set of securities are stocks or options')
         return
 
-    logger.debug(f'Security type: {secType}')
-    funds = transcend.bundles.Bundle(ib, list(kfg[section][secType].split("\n"))[1:], secType)
+    logger.debug(f'Security type: {sec_type}')
+    funds = transcend.bundles.Bundle(ib, list(kfg[section][sec_type].split("\n"))[1:], secType=sec_type)
     await kreate(ib, funds.list(), funds)
 
 HelP = dict()
