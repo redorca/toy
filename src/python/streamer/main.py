@@ -49,6 +49,7 @@ async def create(ib, Symbols, bundler):
 async def compose(Bundle, ibi,):
     duplicate = 0
     skipped = 0
+    ema_calculator = emacalc.EmaCalculator()
     while True:
         """
                 Run a loop for each stock/security a Tick() object represents:
@@ -99,7 +100,7 @@ async def compose(Bundle, ibi,):
         candle = await Bundle.candle_for_tick(localTick)
         if candle is None:
             continue
-        await candle.candle_maker.run_a(tkr)
+        await candle.run_a(tkr)
         logger.info(f"=======  CANDLE  =========> {candle}")
         ema = await ema_calculator.run_a(candle)  # incomplete
         if ema is None:
