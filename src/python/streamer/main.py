@@ -31,7 +31,6 @@ from streamer import davelogging as dl
 logger = dl.logger(__name__, dl.DEBUG, dl.logformat)
 # logger.debug(f"__name__ is {__name__}")  # package name: streamer.davelogging
 # logger.debug(f"__file__ is {__file__}")  # file: /whole/path/to/davelogging.py
-symTicks = dict()
 
 
 async def create(ib, Symbols, bundler):
@@ -75,7 +74,8 @@ async def compose(Bundle, ibi):
             continue
 
         logger.debug(
-            f"{tkr.contract.symbol}"
+            f"{tkr.rtTime}"
+            f" {tkr.contract.symbol}"
             f" ${tkr.last:0.2f}"
             f" sz:{tkr.lastSize}"
             f" vol:{tkr.volume}"
