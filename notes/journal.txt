@@ -32,3 +32,10 @@
 
         This means that the data the code accesses for each symbol duplicates what is done
         for all symbols so in toy's case there is 2x more processing happening than needed.
+
+
+ema crossover
+few hundred milliseconds rresponse
+kernel & financial engineering !
+stocks, options (calls & puts), futures DI+/-, OBV, ema crossover, (my take: alpha, beta, gammer)
+
