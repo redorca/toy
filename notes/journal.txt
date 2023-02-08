@@ -39,3 +39,15 @@ few hundred milliseconds rresponse
 kernel & financial engineering !
 stocks, options (calls & puts), futures DI+/-, OBV, ema crossover, (my take: alpha, beta, gammer)
 
+
+differing response time requirements: slow can be python, fastest should be c/c++, elixir for in between.
+
+
+part II:
+  how to pin threads to cores in C++.
+  ought to be a good use of Qs / databases. Postgresql is supposed to be fast, very fast.
+  maintain as much independence amount threads to avoid locks, race conditions, resource contentions.
+
+
+
+  
