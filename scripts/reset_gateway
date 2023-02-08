@@ -23,14 +23,17 @@
 #                                                                            #
 ##############################################################################
 
-VNC_CMDFILE="/tmp/run_vnc"
+VNC_CMDFILE=run_vnc
 [ -f variables ] && source variables
-# Set a default vnc viewer if not already set in the environment
+[ -d /tmp ] && cd /tmp
+
 ERRMSG_0="No CONNECTION specified."
 ERRMSG_1="No vnc host specified."
 VIEWER=${VNCVIEWER:=xtigervncviewer}
 GATEWAY=${CONNECTION:-$ERRMSG_0}
 HOST=${TARGET:-$ERRMSG_1}
+TIMEOUT=${TIMEOUT:=8}
+LOGFILE=log.run_vnc
 
 build_vnc_cmd()
 {
@@ -38,9 +41,21 @@ build_vnc_cmd()
         cat  > $VNC_CMDFILE << EOF
 #!/bin/bash
 CMD_VNC="$VIEWER $HOST"
+export VNC_PASSWORD=$VNC_PASSWORD
 
-sleep 8
-setsid \$CMD_VNC > /dev/null 2>&1
+# Sleep a bit to give the caller time
+# to set up the ssh tunnel
+#
+sleep $TIMEOUT
+
+# escape the '$' so that the substition happens at runtime
+# not at create time. I.E. CMD_VNC only has meaning once the
+# file is written out and run.
+#
+\$CMD_VNC > $LOGFILE 2>&1
+
+# Remove ourself from existence. The inode will live until we're done.
+rm \$0
 EOF
         chmod +x $VNC_CMDFILE
 }
@@ -51,7 +66,10 @@ build_vnc_cmd
 # run the script in its own procss group disconnected
 # from any stdout/stdin/stderr file descriptors so it
 # wont block waiting for keyboard data.
-setsid $VNC_CMDFILE >/tmp/log.vnc 2>&1 &
+#
+setsid -f ./$VNC_CMDFILE
+
 # Establish the ssh tunnl to the gateway which opens a shell command line
+#
 eval $GATEWAY
 
