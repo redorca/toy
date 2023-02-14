@@ -1,5 +1,6 @@
-#!/bin/bash -x
+#!/bin/env bash
 
+set -x
 ##############################################################################
 #                                                                            #
 #     Combining the ssh connection and pass through for a vnc viewer         #
@@ -40,7 +41,7 @@ build_vnc_cmd()
 {
         rm -f $VNC_CMDFILE
         cat  > $VNC_CMDFILE << EOF
-#!/bin/bash
+#!/bin/env bash
 CMD_VNC="$VIEWER $HOST"
 export VNC_PASSWORD=$VNC_PASSWORD
 
