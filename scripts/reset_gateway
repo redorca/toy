@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash -x
 
 ##############################################################################
 #                                                                            #
@@ -24,7 +24,8 @@
 ##############################################################################
 
 VNC_CMDFILE=run_vnc
-[ -f variables ] && source variables
+[ ! -f variables ] && echo "No variables file to source" >&2 && exit 5
+source variables
 [ -d /tmp ] && cd /tmp
 
 ERRMSG_0="No CONNECTION specified."
