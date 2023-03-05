@@ -30,12 +30,19 @@ source variables
 [ -d /tmp ] && cd /tmp
 
 ERRMSG_0="No CONNECTION specified."
-ERRMSG_1="No vnc host specified."
-VIEWER=${VNCVIEWER:=xtigervncviewer}
+ERRMSG_1="No TARGET for the vnc host specified."
+ERRMSG_2="No VNCVIEWER specified."
+
+VIEWER=${VNCVIEWER:-$ERRMSG_2}
 GATEWAY=${CONNECTION:-$ERRMSG_0}
 HOST=${TARGET:-$ERRMSG_1}
 TIMEOUT=${TIMEOUT:=8}
 LOGFILE=log.run_vnc
+
+if ! /bin/which $VIEWER ; then
+        echo "$VIEWER." >&2
+        exit 3
+fi
 
 build_vnc_cmd()
 {
