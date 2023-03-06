@@ -39,9 +39,10 @@ async def create(ib, Symbols, bundler):
 
     await bundler.register(Symbols)
     task = asyncio.create_task(compose(bundler, ib))
-    if task is None:
-        logger.debug("No task created.")
-    results = await asyncio.gather(task)
+    results = None
+    if not task is None:
+        results = await asyncio.gather(task)
+    if results is None: logger.debug("No task created.")
     return results
 
 
