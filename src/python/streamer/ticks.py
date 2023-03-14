@@ -149,51 +149,8 @@ class Ticks:
         self.ib.disconnect()
 
 
-async def run_b(ib, sym_ticks):
-    """"
-        Run only the pendingTickersEvent monitor
-        # start the ticker stream and events. The variable, tkr,  is a throw away here.
-        for contract, symbol in zip(contracts, symbols):
-    """
-
-    async for tickers in ib.pendingTickersEvent:
-        for ticker in tickers:
-            _tick = sym_ticks[ticker.contract.symbol]
-            await asyncio.sleep(0)
-            # logger.debug(ticker)
-            # each Ticks object will see all subscriptions
-            # first check for redundant ticks
-            if (not np.isnan(ticker.volume) and not ticker.volume == 0):
-                _tick.latest_volume = ticker.volume
-                _tick.queued_tickers.append(ticker)
-                q_len = len(_tick.queued_tickers)
-                if q_len > 10:
-                    logger.debug(
-                        f"queued {ticker.contract.symbol}," f" queue len: {q_len}"
-                    )
-            # else:
-            #     logger.debug(
-            #         f"tossed non-matching ticker,"
-            #         f" queue len: {len(self.queued_tickers)}"
-            #     )
-
-            # can only return once per call, so we can get backed up
-            # use "bad" ticker events to help drain the queue
-            if len(_tick.queued_tickers) > 0:
-                """
-                    If this particular ticker stream (subscription) actually contains
-                    ticks then pop the oldest from the queue and return it.
-                """
-                ticker_ = _tick.queued_tickers.popleft()
-                await asyncio.sleep(0)  # printing and scrolling is slow
-                return ticker_
-            else:
-                """
-                    The queue hasn't any elements so return None.
-                    Async calls always return some value else async gather won't finish.
-                """
-                return None
-
+# @ifname
+# def main():
 
 if __name__ == "__main__":
 
