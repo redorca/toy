@@ -32,6 +32,8 @@ logger = dl.logger(__name__, dl.DEBUG, dl.logformat)
 # logger.debug(f"__name__ is {__name__}")  # package name: streamer.davelogging
 # logger.debug(f"__file__ is {__file__}")  # file: /whole/path/to/davelogging.py
 
+Legend = defaultdict(lambda: None, {'stocks':'STK', 'options':'OPT'})
+
 
 async def create(ib, Symbols, bundler):
     # this is where we add processing block (Arun's block diagram)
@@ -108,7 +110,7 @@ async def compose(Bundle, ibi):
             continue
 
 
-async def main(gateway, secType, ticksFile):
+async def main(gateway, Section, ticksFile):
     try:
         connection = connect.Connection(gateway)
         start = time.perf_counter()
@@ -123,24 +125,23 @@ async def main(gateway, secType, ticksFile):
     kfg = cfg.ConfigParser()
     kfg.read(ticksFile)
 
-    if 'options' in kfg.sections():
-        sec_type = 'OPT'
-        section = 'options'
-    elif 'stocks' in kfg.sections():
-        section = 'stocks'
-        sec_type = 'STK'
-    else:
+    if not kfg.has_section(Section):
+        logger.debug(f'No section {Section} found in {ticksFile}')
+        return
+    sec_type = Legend[Section]
+    if not sec_type:
         logger.debug(f'unable to determine whether this set of securities are stocks or options')
         return
 
     logger.debug(f'Security type: {sec_type}')
-    funds = transcend.bundles.Bundle(ib, list(kfg[section][sec_type].split("\n"))[1:], secType=sec_type)
+    funds = transcend.bundles.Bundle(ib, list(kfg[Section][sec_type].split("\n"))[1:], secType=sec_type)
     await create(ib, funds.list(), funds)
 
-HelP = dict()
-HelP['stocks'] = "Monitor stocks from the IB Gateway."
-HelP['options'] = "Monitor options from the IB Gateway."
-HelP['file'] = "Contains the list of securities to track."
+HelP = defaultdict(lambda: None, {
+    'stocks':"Monitor stocks from the IB Gateway.",
+    'options':"Monitor options from the IB Gateway.",
+    'file':"Contains the list of securities to track.",
+    })
 
 if __name__ == "__main__":
     cmdParse = args.ArgumentParser('Roon')
@@ -154,9 +155,9 @@ if __name__ == "__main__":
         exit()
 
     # One of stocks, options must be true.
-    secType = 'OPT'
+    secType = 'options'
     if cmdLine.stocks:
-        secType = 'STK'
+        secType = 'stocks'
 
     gateway = connect.Btchfpaper()
     ticksFile = cmdLine.file
