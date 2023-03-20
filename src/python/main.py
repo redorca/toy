@@ -3,24 +3,24 @@
 Usage:
   main.py trade [--type=<contract_type>] [--backtest] [--ignore-market-data] [--limit=<n>] [--obv] [--ema]
   main.py trade_sync [--type=<contract_type>] [--backtest] [--ignore-market-data] [--limit=<n>] [--obv] [--ema]
-  main.py cache_warm
-  main.py flatten
-  main.py tickers
-  main.py buy
-  main.py buy_sell
-  main.py trades
-  main.py open_trades
-  main.py positions
-  main.py cancel_open_trades
-  main.py suggest_options
-  main.py today_bars
-  main.py pull_training <out>
-  main.py train <in>
-  main.py test
-  main.py pnl
-  main.py generate_ranges <out> [--days=<n>] [--type=<contract_type>]
-  main.py dump_cross_data <out> [--days=<n>] [--type=<contract_type>]
-  main.py train_cross_data <in>
+  main.py ( cache_warm
+    | flatten 
+    | tickers 
+    | buy
+    | buy_sell
+    | trades
+    | open_trades
+    | positions
+    | cancel_open_trades
+    | suggest_options
+    | today_bars
+    | pull_training <out>
+    | train <in>
+    | test
+    | pnl
+    | generate_ranges <out> [--days=<n>] [--type=<contract_type>]
+    | dump_cross_data <out> [--days=<n>] [--type=<contract_type>]
+    | train_cross_data <in> )
 
 Options:
   --backtest              Run in backtest mode.
@@ -681,6 +681,30 @@ def run_pnl_as():
         for pnl_single in pnl_singles:
             logger.info(pnl_single)
 
+def wrap_trades(args)
+        asyncio.run(run_trading_async(args['--type'], args['--backtest'], args['--ignore-market-data'], args['--limit'],
+                                      args['--obv'],
+                                      args['--ema']))
+
+def wrap_trade_sync(args)
+        run_trading(args['--type'], args['--backtest'], args['--ignore-market-data'], args['--limit'],
+                    args['--obv'],
+                    args['--ema'])
+
+def wrap_train(args):
+        train(args['<in>'])
+
+def wrap_pull_training(args):
+        pull_training_data(args['<out>'])
+
+def wrap_dump_cross_data(args):
+    dump_cross_data(args)
+
+def wrap_train_cross_data(args):
+    train_cross_data(args)
+
+def wrap_generate_ranges(args):
+    generate_ranges(args['<out>'], int(args['--days']), args['--type'])
 
 def generate_ranges(filename, num_days, contract_type):
     ib = connect()
@@ -863,8 +887,85 @@ def train_cross_data(filename):
     plt.scatter(predictions, chart_y)
     plt.show()
 
+Commands = defaultdict(lambda: None)
+Commands["flatten"] = flatten_positions
+Commands["cache_warm"] = cache_warm
+Commands["tickers"] = print_tickers
+Commands["buy"] = place_buy_order
+Commands["buy_sell"] = place_buy_sell_order
+Commands["trades"] = print_trades
+Commands["open_trades"] = print_open_trades
+Commands["positions"] = print_positions
+Commands["cancel_open_trades"] = cancel_open_trades
+Commands["suggest_options"] = watch_list_suggest_options
+Commands["today_bars"] = print_today_bars
+Commands["train"] = train
+Commands["test"] = run_test
+Commands["pnl"] = run_pnl
+
+def main():
+    args = docopt(__doc__)
+    logger.info("Starting args...")
+
+    for key in Commands:
+        if args[key]:
+            logger.critical(f'\n:: Command - {str(Commands[key])}()')
+            print(f"{str(Commands[key]).split('_')[0]}")
+            if str(Commands[key]).split('_')[0] == 'wrap':
+                Commands[key](args)
+            else:
+                Commands[key]()
+    return
+    if args['trade']:
+        asyncio.run(run_trading_async(args['--type'], args['--backtest'], args['--ignore-market-data'], args['--limit'],
+                                      args['--obv'],
+                                      args['--ema']))
+    elif args['trade_sync']:
+        run_trading(args['--type'], args['--backtest'], args['--ignore-market-data'], args['--limit'],
+                    args['--obv'],
+                    args['--ema'])
+    elif args['flatten']:
+        flatten_positions()
+    elif args['cache_warm']:
+        cache_warm()
+    elif args['tickers']:
+        print_tickers()
+    elif args['buy']:
+        place_buy_order()
+    elif args['buy_sell']:
+        place_buy_sell_order()
+    elif args['trades']:
+        print_trades()
+    elif args['open_trades']:
+        print_open_trades()
+    elif args['positions']:
+        print_positions()
+    elif args['cancel_open_trades']:
+        cancel_open_trades()
+    elif args['suggest_options']:
+        watch_list_suggest_options()
+    elif args['today_bars']:
+        print_today_bars()
+    elif args['pull_training']:
+        pull_training_data(args['<out>'])
+    elif args['train']:
+        train(args['<in>'])
+    elif args['test']:
+        run_test()
+    elif args['pnl']:
+        run_pnl()
+    elif args['generate_ranges']:
+        generate_ranges(args['<out>'], int(args['--days']), args['--type'])
+    elif args['dump_cross_data']:
+        dump_cross_data(args['<out>'], int(args['--days']), args['--type'])
+    elif args['train_cross_data']:
+        train_cross_data(args['<in>'])
+    else:
+        raise Exception('unhandled command')
 
 if __name__ == '__main__':
+    main()
+    exit
     logger.critical("docopt for args")
     logger.info("Starting args...")
 
@@ -909,7 +1010,7 @@ if __name__ == '__main__':
         run_test()
     elif args['pnl']:
         run_pnl()
-    elif args['generate_ranges']:
+    elif args['']:
         generate_ranges(args['<out>'], int(args['--days']), args['--type'])
     elif args['dump_cross_data']:
         dump_cross_data(args['<out>'], int(args['--days']), args['--type'])
