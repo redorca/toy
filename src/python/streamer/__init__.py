@@ -7,16 +7,6 @@ from .connect import (
     Gateway, TradersWorkstation, Btcjopaper, Btchfpaper, Nypaperib,
     Chpaperib, GatewayFromEnvironment, Connection,
     )
-from .collect import (
-Gateway,
-TradersWorkstation,
-Btcjopaper,
-Btchfpaper,
-Nypaperib,
-Chpaperib,
-GatewayFromEnvironment,
-Connection,
-)
 from .ticks import (
     Ticks,
     )

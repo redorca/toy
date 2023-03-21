@@ -3,7 +3,8 @@ import re
 import os
 import math
 import datetime
-import talib as tal
+# import talib as tal
+import tulipy as tal
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -11,7 +12,7 @@ import pickle
 import pprint
 import joblib
 
-from pyculiarity import detect_ts
+# from pyculiarity import detect_ts
 from scipy import signal
 
 from bot import state_config

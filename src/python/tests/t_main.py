@@ -3,7 +3,7 @@ import pprint
 
 import ib_insync as ibs
 
-from bot.analyzer import TechnicalAnalyzer, TrendAnalyzer, TrailingSpikeAnalyzer, ObvSpikeAnalyzer, BuyLineAnalyzer, get_trailing_obv, get_recent_obv_range, analyze_obv
+from bot import TechnicalAnalyzer, TrendAnalyzer, TrailingSpikeAnalyzer, ObvSpikeAnalyzer, BuyLineAnalyzer, get_trailing_obv, get_recent_obv_range, analyze_obv
 from bot.provider import BacktestTickProvider, LiveTickProvider
 from bot.strategy import TrendStrategy
 from bot.connect import connect

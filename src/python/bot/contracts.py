@@ -9,9 +9,11 @@ import ib_insync as ibs
 from bot import util
 from bot import conf
 
-import loggingx
+# import loggingx
+from streamer import davelogging as dl
+
 log_level = logging.DEBUG
-logger = loggingx.logger(__file__,log_level)
+logger = dl.logger(__name__, dl.DEBUG, dl.logformat)
 
 def suggest_forex(ib):
     contracts = [
@@ -171,7 +173,8 @@ def suggest_all_options(ib):
 
 
 def suggest_options(ib, limit=None, stocks_limit=None, limit_strike=4, no_filter=False):
-    stocks = await suggest_stocks_async(ib)[:stocks_limit]
+    # stocks = await suggest_stocks_async(ib)[:stocks_limit]
+    stocks = suggest_stocks(ib)[:stocks_limit]
     option_cls = ibs.Option
 
     options = []

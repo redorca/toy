@@ -681,12 +681,12 @@ def run_pnl_as():
         for pnl_single in pnl_singles:
             logger.info(pnl_single)
 
-def wrap_trades(args)
+def wrap_trades(args):
         asyncio.run(run_trading_async(args['--type'], args['--backtest'], args['--ignore-market-data'], args['--limit'],
                                       args['--obv'],
                                       args['--ema']))
 
-def wrap_trade_sync(args)
+def wrap_trade_sync(args):
         run_trading(args['--type'], args['--backtest'], args['--ignore-market-data'], args['--limit'],
                     args['--obv'],
                     args['--ema'])
@@ -887,7 +887,7 @@ def train_cross_data(filename):
     plt.scatter(predictions, chart_y)
     plt.show()
 
-Commands = defaultdict(lambda: None)
+Commands = dict()
 Commands["flatten"] = flatten_positions
 Commands["cache_warm"] = cache_warm
 Commands["tickers"] = print_tickers
@@ -902,6 +902,13 @@ Commands["today_bars"] = print_today_bars
 Commands["train"] = train
 Commands["test"] = run_test
 Commands["pnl"] = run_pnl
+Commands["generate_ranges"] = None
+Commands["trades"] = None
+Commands["trade_sync"] = None
+Commands["dump_cross_data"] = None
+Commands["train_cross_data"] = None
+Commands["trade_sync"] = None
+Commands["pull_training"] = None
 
 def main():
     args = docopt(__doc__)
@@ -909,13 +916,24 @@ def main():
 
     for key in Commands:
         if args[key]:
-            logger.critical(f'\n:: Command - {str(Commands[key])}()')
-            print(f"{str(Commands[key]).split('_')[0]}")
-            if str(Commands[key]).split('_')[0] == 'wrap':
-                Commands[key](args)
+            logger.critical(f"key - {key}")
+            if Commands[key] is None:
+                foo = ''.join([ "wrap_", key ])
+                logger.critical(f"foo {foo}")
+                foo(args)
             else:
                 Commands[key]()
     return
+
+if __name__ == '__main__':
+    main()
+    exit()
+    logger.critical("docopt for args")
+    logger.info("Starting args...")
+
+    args = docopt(__doc__)
+    # logger.info('data from logs: %s', args)
+
     if args['trade']:
         asyncio.run(run_trading_async(args['--type'], args['--backtest'], args['--ignore-market-data'], args['--limit'],
                                       args['--obv'],
@@ -955,62 +973,6 @@ def main():
     elif args['pnl']:
         run_pnl()
     elif args['generate_ranges']:
-        generate_ranges(args['<out>'], int(args['--days']), args['--type'])
-    elif args['dump_cross_data']:
-        dump_cross_data(args['<out>'], int(args['--days']), args['--type'])
-    elif args['train_cross_data']:
-        train_cross_data(args['<in>'])
-    else:
-        raise Exception('unhandled command')
-
-if __name__ == '__main__':
-    main()
-    exit
-    logger.critical("docopt for args")
-    logger.info("Starting args...")
-
-    args = docopt(__doc__)
-    logger.info('data from logs: %s', args)
-
-    if args['trade']:
-        asyncio.run(run_trading_async(args['--type'], args['--backtest'], args['--ignore-market-data'], args['--limit'],
-                                      args['--obv'],
-                                      args['--ema']))
-    elif args['trade_sync']:
-        run_trading(args['--type'], args['--backtest'], args['--ignore-market-data'], args['--limit'],
-                    args['--obv'],
-                    args['--ema'])
-    elif args['flatten']:
-        flatten_positions()
-    elif args['cache_warm']:
-        cache_warm()
-    elif args['tickers']:
-        print_tickers()
-    elif args['buy']:
-        place_buy_order()
-    elif args['buy_sell']:
-        place_buy_sell_order()
-    elif args['trades']:
-        print_trades()
-    elif args['open_trades']:
-        print_open_trades()
-    elif args['positions']:
-        print_positions()
-    elif args['cancel_open_trades']:
-        cancel_open_trades()
-    elif args['suggest_options']:
-        watch_list_suggest_options()
-    elif args['today_bars']:
-        print_today_bars()
-    elif args['pull_training']:
-        pull_training_data(args['<out>'])
-    elif args['train']:
-        train(args['<in>'])
-    elif args['test']:
-        run_test()
-    elif args['pnl']:
-        run_pnl()
-    elif args['']:
         generate_ranges(args['<out>'], int(args['--days']), args['--type'])
     elif args['dump_cross_data']:
         dump_cross_data(args['<out>'], int(args['--days']), args['--type'])
