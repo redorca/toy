@@ -1,10 +1,10 @@
 """Trading bot.
 
 Usage:
-  main.py trade [--type=<contract_type>] [--backtest] [--ignore-market-data] [--limit=<n>] [--obv] [--ema]
-  main.py trade_sync [--type=<contract_type>] [--backtest] [--ignore-market-data] [--limit=<n>] [--obv] [--ema]
-  main.py ( cache_warm
+  main.py ( trade [--type=<contract_type>] [--backtest] [--ignore-market-data] [--limit=<n>] [--obv] [--ema]
+    | trade_sync [--type=<contract_type>] [--backtest] [--ignore-market-data] [--limit=<n>] [--obv] [--ema]
     | flatten 
+    | cache_warm
     | tickers 
     | buy
     | buy_sell
@@ -68,7 +68,8 @@ from bot.contracts import (OptionsWatchlist,
                            suggest_ranked_options, suggest_micro_futures,
                            suggest_fang_stocks, suggest_crypto,
                            )
-from bot.connect import connect, connect_async
+from streamer import connect
+# from bot.connect import connect, connect_async
 from bot.pnl import SignalLogger
 from bot.strategy import ToggleStrategy, EmaCrossoverStrategy
 from bot.trader import Trader
