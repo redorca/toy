@@ -68,8 +68,8 @@ from bot.contracts import (OptionsWatchlist,
                            suggest_ranked_options, suggest_micro_futures,
                            suggest_fang_stocks, suggest_crypto,
                            )
-from streamer import connect
-# from bot.connect import connect, connect_async
+# from streamer import connect
+from bot.connect import connect, connect_async
 from bot.pnl import SignalLogger
 from bot.strategy import ToggleStrategy, EmaCrossoverStrategy
 from bot.trader import Trader
