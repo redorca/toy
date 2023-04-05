@@ -1,4 +1,5 @@
 from collections import defaultdict
+from ib_insync import tickerTypes
 
 # more tickTypes at https://interactivebrokers.github.io/tws-api/tick_types.html
 type2name = defaultdict(
@@ -65,6 +66,7 @@ tickTypes = [
         ["Close EFP Computation",   "Computed closing EFP price for previous day"],
         ["Last Timestamp",   "Time of the last trade (in UNIX time)."],
         ["Shortable",   "Describes the level of difficulty with which the contract can be sold short. "],
+        ["None","None"],
         ["RT Volume (Time &amp; Sales)",   "Last trade details (Including both \"Last\" and \"Unreportable Last\" trades). "],
         ["Halted",   "Indicates if a contract is halted. "],
         ["Bid Yield",   "Implied yield of the bond if it is purchased at the current bid."],
@@ -107,6 +109,8 @@ tickTypes = [
         ["Average Option Volume",   "Average volume of the corresponding option contracts(TWS Build 970+ is required)"],
         ["Delayed Last Timestamp",   "Delayed time of the last trade (in UNIX time) (TWS Build 970+ is required)"],
         ["Shortable Shares",   "Number of shares available to short (TWS Build 974+ is required)"],
+        ["None","None"],
+        ["None","None"],
         ["ETF Nav Close",   "Today's closing price of ETF's Net Asset Value (NAV). Calculation is based on prices of ETF's underlying securities."],
         ["ETF Nav Prior Close",   "Yesterday's closing price of ETF's Net Asset Value (NAV). Calculation is based on prices of ETF's underlying securities."],
         ["ETF Nav Bid",   "The bid price of ETF's Net Asset Value (NAV). Calculation is based on prices of ETF's underlying securities."],
@@ -119,12 +123,12 @@ tickTypes = [
         ["Final IPO Price",   "Final price for IPO"],
     ]
 
-def dump_tick_types():
+def dump_ticktypes():
     '''
     list each tick code, name, and description
     '''
-    for idx in range(0, len(tickTypes)):
-        print(f'        {idx} : \"{tickTypes[idx][0]}\" \"{tickTypes[idx][1]}\"')
+    for val in tickerTypes:
+        print(f"\t{val}:{tickerTypes[val]}")
 
 if __name__ == "__main__":
     dump_tick_types()
