@@ -915,11 +915,15 @@ def main():
     args = docopt(__doc__)
     logger.info("Starting args...")
 
+    #
+    # The commands are declared exclusive so only one may be selected at any time.
+    # The arg handling from doc automatically enforces the exlusivity of each command.
+    #
     for key in Commands:
         if args[key]:
             logger.critical(f"key - {key}")
             if Commands[key] is None:
-                foo = ''.join([ "wrap_", key ])
+                foo = '_'.join([ "wrap", key ])
                 logger.critical(f"foo {foo}")
                 foo(args)
             else:

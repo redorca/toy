@@ -162,3 +162,16 @@ def min_increment(ib, contract):
     details = ib.reqContractDetails(contract)
     [ticker] = ib.reqTickers(contract)
     return details[0].minTick
+
+def dump_dict(source,/, Color="34"):
+    Prefix = ''.join(["\033[1;", Color, "m"])
+    Reset = "\033[0;39;49m"
+    distance = [ '\t', '\t', '\t', '\t', '\t', '\t',]
+    '''
+        list each dictionary label and value in an aligned format
+    '''
+    for val in source:
+        xtent = (39 - len(val)) / 8
+        space = ''.join(distance[:int(xtent)])
+        print(f"\t{Prefix}{val}{Reset}{space}{source[val]}")
+    print("\n\n")
