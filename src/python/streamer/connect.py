@@ -107,7 +107,6 @@ class Connection:
             self.client_id = Connection.client_id
             Connection.client_id += 1  # increment class variable
         connect_args = self.__build_args__()
-        print(f' args ', connect_args)
         self.ib.connect(**connect_args)
         if self.ib.isConnected():
             logger.info(f"successful connection to {self.gateway.host}")
@@ -119,7 +118,6 @@ class Connection:
             Connection.client_id += 1
 
         connect_args = self.__build_args__()
-        print(f' args ', connect_args)
         await self.ib.connectAsync(**connect_args)
         return self.ib
 
