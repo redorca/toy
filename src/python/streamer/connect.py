@@ -20,7 +20,7 @@ class Gateway:
     """
 
     host: str = None
-    port: int = 4002
+    port: int = None
     account: str = None
     timeout: float = 10.0
 
@@ -55,12 +55,14 @@ class TradersWorkstation(Gateway):
 
 class Btcjopaper(Gateway):
     host = config.gateway_hosts.get("btcjopaper", "btcjopaper.rockyahoo.com")
+    port = 4002
+    # port = config.gateway_hosts.get('port')
     account = "DF3987931"
 
 
 class Btchfpaper(Gateway):
     host = config.gateway_hosts.get("btchfpaper", "btchfpaper.rockyahoo.com")
-
+    port = 4002
 
 class Nypaperib(Gateway):
     host = config.gateway_hosts.get("nypaperib", "nypaperib.rockyahoo.com")
@@ -92,31 +94,33 @@ class Connection:
             self.gateway = gateway
         self.ib = ibi.IB()
 
+    def __build_args__(self):
+        host=self.gateway.host
+        port=int(self.gateway.port)
+        clientId=int(self.client_id)
+        timeout=float(self.gateway.timeout)
+
+        return tradingargs = {'host':host, 'port':port, 'clientId':clientId, 'timeout':timeout}
+
     def connect(self, client_id: Optional[int] = None):
         if client_id is None:
             self.client_id = Connection.client_id
             Connection.client_id += 1  # increment class variable
-        self.ib.connect(
-            host=self.gateway.host,
-            port=int(self.gateway.port),
-            clientId=self.client_id,
-            timeout=float(self.gateway.timeout),
-            account=self.gateway.account,
-        )
-        # if self.ib.isConnected():
-        #     logger.info(f"successful connection to {self.gateway.host}")
+        connect_args = self.__build_args__()
+        print(f' args ', connect_args)
+        self.ib.connect(**connect_args)
+        if self.ib.isConnected():
+            logger.info(f"successful connection to {self.gateway.host}")
         return self.ib
 
     async def connect_async(self, client_id=None):
         if client_id is None:
             self.client_id = Connection.client_id
             Connection.client_id += 1
-        await self.ib.connectAsync(
-            host=self.gateway.host,
-            port=int(self.gateway.port),
-            clientId=Connection.client_id,
-            timeout=float(self.gateway.timeout),
-        )
+
+        connect_args = self.__build_args__()
+        print(f' args ', connect_args)
+        await self.ib.connectAsync(**connect_args)
         return self.ib
 
     def close(self):
