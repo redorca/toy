@@ -3,9 +3,9 @@
 Usage:
   main.py ( trade [--type=<contract_type>] [--backtest] [--ignore-market-data] [--limit=<n>] [--obv] [--ema]
     | trade_sync [--type=<contract_type>] [--backtest] [--ignore-market-data] [--limit=<n>] [--obv] [--ema]
-    | flatten 
+    | flatten
     | cache_warm
-    | tickers 
+    | tickers
     | buy
     | buy_sell
     | trades
@@ -21,6 +21,31 @@ Usage:
     | generate_ranges <out> [--days=<n>] [--type=<contract_type>]
     | dump_cross_data <out> [--days=<n>] [--type=<contract_type>]
     | train_cross_data <in> )
+    --file=<file>
+
+Arguments:
+    <in>                    The argument requires input
+    <out>                   The argument returns output
+    trade                 execute trades for provided securities
+    trade_sync
+    flatten
+    cache_warm
+    tickers
+    buy
+    buy_sell
+    trades
+    open_trades
+    positions
+    cancel_open_trades
+    suggest_options
+    today_bars
+    pull_training <out>
+    train <in>
+    test
+    pnl
+    generate_ranges <out> [--days=<n>] [--type=<contract_type>]
+    dump_cross_data <out> [--days=<n>] [--type=<contract_type>]
+    train_cross_data <in>
 
 Options:
   --backtest              Run in backtest mode.
@@ -50,6 +75,7 @@ import matplotlib.pyplot as plt
 import sklearn
 import joblib
 import logging
+import configparser as cfg
 from collections import defaultdict
 from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor, VotingRegressor
 from sklearn.neural_network import MLPClassifier, MLPRegressor
@@ -911,6 +937,21 @@ Commands["train_cross_data"] = None
 Commands["trade_sync"] = None
 Commands["pull_training"] = None
 
+def config_section_retrieve(afile):
+    kfg = cfg.ConfigParser()
+    for Section in [ "stocks", "options" ]:
+        if not conf.has_section(Section):
+            logger.debug(f'No section {Section} found in {ticksFile}')
+            return None
+        sec_type = Legend[Section]
+        if not sec_type:
+            logger.debug(f'No securities found.')
+            return None
+        kfg.read(ticksFile)
+        funds = list(kfg[Section][sec_type].split("\n"))[1:]
+        return funds
+
+
 def main():
     args = docopt(__doc__)
     logger.info("Starting args...")
@@ -938,6 +979,13 @@ if __name__ == '__main__':
 
     args = docopt(__doc__)
     # logger.info('data from logs: %s', args)
+
+    #
+    # since --track is a required argument there is no need to verify its presence.
+    if not (securities := config_section_retrieve(args['track'])):
+        logger.critical(f'No securities provided. Use --track <file> to provide a list')
+        exit(1)
+
 
     if args['trade']:
         asyncio.run(run_trading_async(args['--type'], args['--backtest'], args['--ignore-market-data'], args['--limit'],
