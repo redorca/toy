@@ -100,7 +100,7 @@ class Connection:
         clientId=int(self.client_id)
         timeout=float(self.gateway.timeout)
 
-        return tradingargs = {'host':host, 'port':port, 'clientId':clientId, 'timeout':timeout}
+        return (tradingargs := {'host':host, 'port':port, 'clientId':clientId, 'timeout':timeout})
 
     def connect(self, client_id: Optional[int] = None):
         if client_id is None:
