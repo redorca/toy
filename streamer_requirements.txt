@@ -16,3 +16,5 @@ regex>=2021.11.10
 six>=1.16.0
 tomli>=1.2.2
 typing-extensions>=3.10.0.2
+asyncio
+ib_insync
