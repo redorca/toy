@@ -1,0 +1,35 @@
+TwsApiCpp
+git@github.com:rudimeier/twsapi.git
+
+    I'm looking for a library that wraps the tws c++ api in the same way that ib_insync does. I've found a couple that sort of do this and are still maintained and one that is unmaintained  for several years now.
+
+   Are you aware of anything like this?
+
+
+I am not aware of any C++ frameworks that sit on-top of the C++ TWS API.
+
+Ewald de Wit has done a great job architecting and implementing ib_insync. Maybe you can find an async library for C++ that is close enough to what he uses and borrow from his approach (though using C++ TWS API underneath instead of implementing your own serializer/deserializer).
+
+
+
+=============
+Based on recommendation I installed the package, libintelrdfpmath-dev, modified the makefile in IBJts/source/cppclient/client to specify ibbidgcc000.a instead of libbidgcc.so. Had also to modify the makefile to build an archive instead of a shared object because the installed package’s set of libs did not have a shared object.
+
+The sample test client also required the same change.
+
+Build works.
+
+=============
+TwsApiCpp
+		Builds properly. Several compiler warnings were corrected primarily in exception handlers.
+
+Based on comments in the twsapi@groups.io forum there is no c++ equivalent to ib_insync.
+
+
+
+=============
+Plan moving forward:
+                 Create the c++ equivalent to ib_insync using ib_insync as a guide or template.
+	     If the cpp_insync, used as an extension and imported by python scripts, behaves the same in python land then life is good.
+
+
