@@ -1,0 +1,34 @@
+#!/bin/bash
+
+
+declare -A stack
+
+while [ $# -ne 0 ] ; do
+        case "$1" in
+                '-I') In_File="$2"; shift
+                        echo "In file is $In_File"
+                        ;;
+                '-O') Out_File="$2"; shift
+                        echo "Out file is $Out_File"
+                        ;;
+                *) echo "Unknown arg $1" >&2
+        esac
+        shift
+done
+
+if [ -z "$In_File" -o -z "$Out_File" ] ; then
+        echo "Something is wrong" >&2
+        exit
+fi
+rm "$Out_File"
+
+cat $In_File | while read one ; do
+        val=$(echo "$one" | md5sum)
+        if [ -n "${stack[$val]}" ] ; then
+                # echo "Found a duplicate? $one" >&2
+                # echo "hash is $val" >&2
+                continue
+        fi
+        echo "$one" >> $Out_File
+        stack[$val]="$one"
+done
