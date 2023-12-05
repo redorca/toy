@@ -13,11 +13,11 @@ def main(in_File, out_file):
 
     with open(in_File, 'r') as In , open(out_file, 'w') as Out:
         for line in In.readlines():
-            seen[line] = seen.get(line, 0) + 1
-            if seen[line] == 1:
-                Out.writelines(line)
-            if seen[line] != 1:
-                print(line)
+            testLine = line.rstrip()
+
+            seen[testLine] = seen.get(testLine, 0) + 1
+            if seen[testLine] == 1:
+                Out.writelines(testLine + '\n')
 
 cmdParse = args.ArgumentParser('unique')
 cmdParse.add_argument('-I', '--source', help=Help['source'], nargs=1, required=True, action='store')
